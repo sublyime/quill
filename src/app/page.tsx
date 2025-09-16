@@ -9,10 +9,11 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { RealtimeChart } from '@/components/dashboard/realtime-chart';
 import { BarChartSimple } from '@/components/dashboard/bar-chart-simple';
 import { PieChartSimple } from '@/components/dashboard/pie-chart-simple';
-import { Thermometer, Zap, Gauge, Users, PieChart as PieChartIcon } from 'lucide-react';
+import { Thermometer, Zap, Gauge, Users, PieChart as PieChartIcon, Settings } from 'lucide-react';
 
 const ResponsiveGridLayout = WidthProvider(Responsive);
 
@@ -52,7 +53,12 @@ export default function DashboardPage() {
                     <CardTitle className="text-sm font-medium">
                     Industrial Sensor Temperature
                     </CardTitle>
-                    <Thermometer className="h-4 w-4 text-muted-foreground" />
+                    <div className="flex items-center gap-2">
+                        <Button variant="ghost" size="icon" className="h-4 w-4">
+                            <Settings className="h-4 w-4 text-muted-foreground" />
+                        </Button>
+                        <Thermometer className="h-4 w-4 text-muted-foreground" />
+                    </div>
                 </CardHeader>
                 <CardContent>
                     <RealtimeChart yAxisLabel="°C" initialValue={45} minValue={30} maxValue={90} />
@@ -65,7 +71,12 @@ export default function DashboardPage() {
                     <CardTitle className="text-sm font-medium">
                     Device Connections
                     </CardTitle>
-                    <Users className="h-4 w-4 text-muted-foreground" />
+                    <div className="flex items-center gap-2">
+                        <Button variant="ghost" size="icon" className="h-4 w-4">
+                            <Settings className="h-4 w-4 text-muted-foreground" />
+                        </Button>
+                        <Users className="h-4 w-4 text-muted-foreground" />
+                    </div>
                 </CardHeader>
                 <CardContent>
                     <BarChartSimple />
@@ -78,7 +89,12 @@ export default function DashboardPage() {
                     <CardTitle className="text-sm font-medium">
                     Data Source Types
                     </CardTitle>
-                    <PieChartIcon className="h-4 w-4 text-muted-foreground" />
+                    <div className="flex items-center gap-2">
+                        <Button variant="ghost" size="icon" className="h-4 w-4">
+                            <Settings className="h-4 w-4 text-muted-foreground" />
+                        </Button>
+                        <PieChartIcon className="h-4 w-4 text-muted-foreground" />
+                    </div>
                 </CardHeader>
                 <CardContent>
                     <PieChartSimple />
@@ -91,7 +107,12 @@ export default function DashboardPage() {
                     <CardTitle className="text-sm font-medium">
                     IoT Device Voltage
                     </CardTitle>
-                    <Zap className="h-4 w-4 text-muted-foreground" />
+                     <div className="flex items-center gap-2">
+                        <Button variant="ghost" size="icon" className="h-4 w-4">
+                            <Settings className="h-4 w-4 text-muted-foreground" />
+                        </Button>
+                        <Zap className="h-4 w-4 text-muted-foreground" />
+                    </div>
                 </CardHeader>
                 <CardContent>
                     <RealtimeChart yAxisLabel="V" initialValue={3.3} minValue={2.8} maxValue={3.8} precision={2} />
@@ -104,7 +125,12 @@ export default function DashboardPage() {
                     <CardTitle className="text-sm font-medium">
                     System Pressure
                     </CardTitle>
-                    <Gauge className="h-4 w-4 text-muted-foreground" />
+                    <div className="flex items-center gap-2">
+                        <Button variant="ghost" size="icon" className="h-4 w-4">
+                            <Settings className="h-4 w-4 text-muted-foreground" />
+                        </Button>
+                        <Gauge className="h-4 w-4 text-muted-foreground" />
+                    </div>
                 </CardHeader>
                 <CardContent>
                     <RealtimeChart yAxisLabel="PSI" initialValue={100} minValue={80} maxValue={150} />
@@ -113,11 +139,16 @@ export default function DashboardPage() {
         </div>
          <div key="f">
             <Card className="w-full h-full">
-                <CardHeader>
-                    <CardTitle>Combined Feed</CardTitle>
-                    <CardDescription>A larger view of multiple data points.</CardDescription>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <div>
+                        <CardTitle>Combined Feed</CardTitle>
+                        <CardDescription>A larger view of multiple data points.</CardDescription>
+                    </div>
+                     <Button variant="ghost" size="icon" className="h-4 w-4">
+                        <Settings className="h-4 w-4 text-muted-foreground" />
+                    </Button>
                 </CardHeader>
-                <CardContent className="h-[calc(100%-72px)]">
+                <CardContent className="h-[calc(100%-72px)] pt-6">
                     <RealtimeChart yAxisLabel="Value" initialValue={500} minValue={0} maxValue={1000} />
                 </CardContent>
             </Card>
