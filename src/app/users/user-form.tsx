@@ -22,6 +22,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { toast } from '@/hooks/use-toast';
+import type { User } from './columns';
 
 const formSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters.'),
@@ -29,8 +30,14 @@ const formSchema = z.object({
   role: z.enum(['Admin', 'Editor', 'Viewer']),
 });
 
-export function UserForm() {
-  const form = useForm<z.infer<typeof formSchema>>({
+type UserFormValues = z.infer<typeof formSchema>;
+
+interface UserFormProps {
+    onUserAdded: (user: UserFormValues) => void;
+}
+
+export function UserForm({ onUserAdded }: UserFormProps) {
+  const form = useForm<UserFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: '',
@@ -39,13 +46,13 @@ export function UserForm() {
     },
   });
 
-  function onSubmit(values: z.infer<typeof formSchema>) {
-    console.log('User form submitted:', values);
+  function onSubmit(values: UserFormValues) {
+    onUserAdded(values);
     toast({
       title: 'User Created',
       description: `User ${values.name} has been successfully created.`,
     });
-    // Here you would typically close the dialog and refresh the user list
+    form.reset();
   }
 
   return (
