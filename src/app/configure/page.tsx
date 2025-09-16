@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -10,11 +11,29 @@ import {
 import { ConnectionForm } from './connection-form';
 import { ConnectionsList } from './connections-list';
 import { SlidersHorizontal, List } from 'lucide-react';
-import { initialConnections, Connection } from './connections-data';
+import { Connection } from './connections-data';
 import { TerminalView } from './terminal-view';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function ConfigurePage() {
-  const [connections, setConnections] = useState<Connection[]>(initialConnections);
+  const [connections, setConnections] = useState<Connection[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    // Fetch initial connections from the API
+    async function fetchConnections() {
+      try {
+        const response = await fetch('/api/connections');
+        const data = await response.json();
+        setConnections(data);
+      } catch (error) {
+        console.error("Failed to fetch connections:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    fetchConnections();
+  }, []);
 
   const addConnection = (newConnection: Connection) => {
     setConnections(prev => [newConnection, ...prev]);
@@ -24,7 +43,6 @@ export default function ConfigurePage() {
     const interval = setInterval(() => {
       setConnections((currentConnections) => {
         if (currentConnections.length === 0) {
-          clearInterval(interval);
           return currentConnections;
         }
         
@@ -32,7 +50,6 @@ export default function ConfigurePage() {
         const randomConnection = currentConnections[randomIndex];
         const statuses: Connection['status'][] = ['online', 'offline', 'error'];
         
-        // Ensure the new status is different from the old one
         let newStatus: Connection['status'];
         do {
             newStatus = statuses[Math.floor(Math.random() * statuses.length)];
@@ -44,10 +61,10 @@ export default function ConfigurePage() {
             : conn
         );
       });
-    }, 3000); // Update every 3 seconds
+    }, 3000);
 
     return () => clearInterval(interval);
-  }, []); // Run only once
+  }, []);
 
   return (
     <div className="flex flex-col gap-6">
@@ -76,7 +93,15 @@ export default function ConfigurePage() {
             </div>
         </TabsContent>
         <TabsContent value="connections" className="mt-6">
-          <ConnectionsList connections={connections} />
+          {isLoading ? (
+            <div className="space-y-4">
+              <Skeleton className="h-12 w-full" />
+              <Skeleton className="h-12 w-full" />
+              <Skeleton className="h-12 w-full" />
+            </div>
+          ) : (
+            <ConnectionsList connections={connections} />
+          )}
         </TabsContent>
       </Tabs>
     </div>

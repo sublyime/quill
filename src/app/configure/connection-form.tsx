@@ -1,3 +1,4 @@
+
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -41,6 +42,7 @@ interface ConnectionFormProps {
 
 export function ConnectionForm({ onAddConnection }: ConnectionFormProps) {
   const [selectedType, setSelectedType] = useState<DataSourceType | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -51,24 +53,49 @@ export function ConnectionForm({ onAddConnection }: ConnectionFormProps) {
   
   const currentFields = selectedType ? DATA_SOURCE_CONFIGS[selectedType]?.fields : [];
 
-  function onSubmit(values: z.infer<typeof formSchema>) {
+  async function onSubmit(values: z.infer<typeof formSchema>) {
+    setIsSubmitting(true);
     const newConnection: Connection = {
         id: `conn_${Date.now()}`,
         name: values.connectionName,
         sourceType: values.dataSourceType as Connection['sourceType'],
-        status: 'online',
+        status: 'online', // New connections default to online
         lastActivity: new Date().toISOString(),
     };
-    onAddConnection(newConnection);
-    
-    toast({
-      title: 'Configuration Saved',
-      description: `Connection "${values.connectionName}" has been successfully created.`,
-    });
 
-    form.reset();
-    form.setValue('dataSourceType', '');
-    setSelectedType(null);
+    try {
+      const response = await fetch('/api/connections', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newConnection),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to save connection');
+      }
+
+      const savedConnection = await response.json();
+      onAddConnection(savedConnection);
+      
+      toast({
+        title: 'Configuration Saved',
+        description: `Connection "${values.connectionName}" has been successfully created.`,
+      });
+
+      form.reset();
+      form.setValue('dataSourceType', '');
+      setSelectedType(null);
+
+    } catch (error) {
+      console.error(error);
+      toast({
+        title: 'Error',
+        description: 'Could not save the new connection. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+        setIsSubmitting(false);
+    }
   }
 
   const handleTypeChange = (value: DataSourceType) => {
@@ -162,8 +189,8 @@ export function ConnectionForm({ onAddConnection }: ConnectionFormProps) {
             )}
             </AnimatePresence>
 
-            <Button type="submit" disabled={!selectedType}>
-              Save Configuration
+            <Button type="submit" disabled={!selectedType || isSubmitting}>
+              {isSubmitting ? 'Saving...' : 'Save Configuration'}
             </Button>
           </form>
         </Form>
