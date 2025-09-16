@@ -1,6 +1,6 @@
 'use client';
 
-import { useFormState, useFormStatus } from 'react-dom';
+import { useActionState, useFormStatus } from 'react';
 import { getProtocolSuggestion } from '@/app/actions';
 
 import { Button } from '@/components/ui/button';
@@ -32,7 +32,7 @@ function SubmitButton() {
 }
 
 export function ProtocolRecommender() {
-  const [state, formAction] = useFormState(getProtocolSuggestion, initialState);
+  const [state, formAction] = useActionState(getProtocolSuggestion, initialState);
   const formRef = useRef<HTMLFormElement>(null);
 
   useEffect(() => {
