@@ -11,6 +11,7 @@ import { ConnectionForm } from './connection-form';
 import { ConnectionsList } from './connections-list';
 import { SlidersHorizontal, List } from 'lucide-react';
 import { initialConnections, Connection } from './connections-data';
+import { TerminalView } from './terminal-view';
 
 export default function ConfigurePage() {
   const [connections, setConnections] = useState<Connection[]>(initialConnections);
@@ -69,7 +70,10 @@ export default function ConfigurePage() {
           </TabsTrigger>
         </TabsList>
         <TabsContent value="setup" className="mt-6">
-          <ConnectionForm onAddConnection={addConnection} />
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <ConnectionForm onAddConnection={addConnection} />
+                <TerminalView />
+            </div>
         </TabsContent>
         <TabsContent value="connections" className="mt-6">
           <ConnectionsList connections={connections} />
