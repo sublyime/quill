@@ -25,7 +25,7 @@ export function ConnectionsList() {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <DataTable columns={columns} data={connections} />
+        <DataTable columns={columns} data={connections} filterColumn='name' filterPlaceholder='Filter connections by name...' />
       </CardContent>
     </Card>
   );
