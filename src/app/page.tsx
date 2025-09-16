@@ -6,7 +6,9 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { RealtimeChart } from '@/components/dashboard/realtime-chart';
-import { Thermometer, Zap, Gauge } from 'lucide-react';
+import { BarChartSimple } from '@/components/dashboard/bar-chart-simple';
+import { PieChartSimple } from '@/components/dashboard/pie-chart-simple';
+import { Thermometer, Zap, Gauge, Users, PieChart as PieChartIcon } from 'lucide-react';
 
 export default function DashboardPage() {
   return (
@@ -32,6 +34,28 @@ export default function DashboardPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
+              Device Connections
+            </CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <BarChartSimple />
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              Data Source Types
+            </CardTitle>
+            <PieChartIcon className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <PieChartSimple />
+          </CardContent>
+        </Card>
+         <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
               IoT Device Voltage
             </CardTitle>
             <Zap className="h-4 w-4 text-muted-foreground" />
@@ -51,12 +75,12 @@ export default function DashboardPage() {
             <RealtimeChart yAxisLabel="PSI" initialValue={100} minValue={80} maxValue={150} />
           </CardContent>
         </Card>
-        <Card className="md:col-span-2 lg:col-span-3">
+        <Card className="lg:col-span-1">
           <CardHeader>
             <CardTitle>Combined Feed</CardTitle>
             <CardDescription>A larger view of multiple data points.</CardDescription>
           </CardHeader>
-          <CardContent className="h-[400px]">
+          <CardContent className="h-[200px]">
              <RealtimeChart yAxisLabel="Value" initialValue={500} minValue={0} maxValue={1000} />
           </CardContent>
         </Card>
