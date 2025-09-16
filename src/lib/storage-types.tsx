@@ -36,9 +36,19 @@ const PostgresIcon = () => (
   </svg>
 );
 
+const MsSqlIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M5 20V4C5 2.89543 5.89543 2 7 2H17C18.1046 2 19 2.89543 19 4V20L15 18L12 20L9 18L5 20Z" fill="#CC2927" stroke="#CC2927" strokeWidth="1.5" strokeLinejoin="round"/>
+    <path d="M9 7H15" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
+    <path d="M9 11H15" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
+    <path d="M9 15H12" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
+  </svg>
+  );
+
 
 export type StorageType =
   | 'postgresql'
+  | 'mssql'
   | 'aws_s3'
   | 'google_cloud_storage'
   | 'azure_blob_storage'
@@ -121,6 +131,19 @@ export const STORAGE_CONFIGS: Record<StorageType, StorageConfig> = {
       { name: 'port', label: 'Port', type: 'number', placeholder: '5432' },
       { name: 'database', label: 'Database Name', type: 'text', placeholder: 'mydatabase' },
       { name: 'user', label: 'User', type: 'text', placeholder: 'postgres' },
+      { name: 'password', label: 'Password', type: 'password', placeholder: 'your-password' },
+    ],
+  },
+  mssql: {
+    value: 'mssql',
+    label: 'SQL Server',
+    icon: MsSqlIcon,
+    category: 'Local Database',
+    fields: [
+      { name: 'host', label: 'Host', type: 'text', placeholder: 'localhost' },
+      { name: 'port', label: 'Port', type: 'number', placeholder: '1433' },
+      { name: 'database', label: 'Database Name', type: 'text', placeholder: 'mydatabase' },
+      { name: 'user', label: 'User', type: 'text', placeholder: 'sa' },
       { name: 'password', label: 'Password', type: 'password', placeholder: 'your-password' },
     ],
   },
