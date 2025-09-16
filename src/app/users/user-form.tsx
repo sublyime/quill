@@ -23,6 +23,7 @@ import {
 } from '@/components/ui/select';
 import { toast } from '@/hooks/use-toast';
 import type { User } from './columns';
+import { useState } from 'react';
 
 const formSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters.'),
@@ -33,10 +34,11 @@ const formSchema = z.object({
 type UserFormValues = z.infer<typeof formSchema>;
 
 interface UserFormProps {
-    onUserAdded: (user: UserFormValues) => void;
+    onUserAdded: (user: User) => void;
 }
 
 export function UserForm({ onUserAdded }: UserFormProps) {
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const form = useForm<UserFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -46,13 +48,38 @@ export function UserForm({ onUserAdded }: UserFormProps) {
     },
   });
 
-  function onSubmit(values: UserFormValues) {
-    onUserAdded(values);
-    toast({
-      title: 'User Created',
-      description: `User ${values.name} has been successfully created.`,
-    });
-    form.reset();
+  async function onSubmit(values: UserFormValues) {
+    setIsSubmitting(true);
+    try {
+      const response = await fetch('/api/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(values),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to create user');
+      }
+      
+      const newUser = await response.json();
+      onUserAdded(newUser);
+
+      toast({
+        title: 'User Created',
+        description: `User ${values.name} has been successfully created.`,
+      });
+      form.reset();
+
+    } catch (error) {
+      console.error(error);
+      toast({
+        title: 'Error',
+        description: 'Could not create the new user. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   return (
@@ -107,8 +134,8 @@ export function UserForm({ onUserAdded }: UserFormProps) {
           )}
         />
         <div className="flex justify-end pt-4">
-           <Button type="submit">
-             Create User
+           <Button type="submit" disabled={isSubmitting}>
+             {isSubmitting ? 'Creating...' : 'Create User'}
             </Button>
         </div>
       </form>

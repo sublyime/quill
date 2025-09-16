@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Connection } from './connections-data';
@@ -25,7 +26,7 @@ export function ConnectionsList({ connections }: ConnectionsListProps) {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <DataTable columns={columns} data={connections} filterColumn='name' filterPlaceholder='Filter connections by name...' />
+        <DataTable columns={columns} data={connections} filterColumn='name' filterPlaceholder='Filter by name...' />
       </CardContent>
     </Card>
   );

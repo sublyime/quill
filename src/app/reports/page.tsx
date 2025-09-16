@@ -1,13 +1,13 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ReportForm, ReportConfig } from './report-form';
 import { ReportView, ReportData } from './report-view';
-import { initialConnections } from '@/app/configure/connections-data';
+import { Connection } from '@/app/configure/connections-data';
 
 // Mock data generation
-const generateMockReportData = (config: ReportConfig): ReportData[] => {
+const generateMockReportData = (config: ReportConfig, connections: Connection[]): ReportData[] => {
   if (config.connections.length === 0 || config.dataPoints.length === 0) return [];
   
   const data: ReportData[] = [];
@@ -18,7 +18,7 @@ const generateMockReportData = (config: ReportConfig): ReportData[] => {
   for (let i = 0; i < 50; i++) {
     const timestamp = new Date(startTime + i * timeStep);
     for (const connId of config.connections) {
-      const connection = initialConnections.find(c => c.id === connId);
+      const connection = connections.find(c => c.id === connId);
       if (connection) {
         for (const dp of config.dataPoints) {
            data.push({
@@ -37,11 +37,31 @@ const generateMockReportData = (config: ReportConfig): ReportData[] => {
 export default function ReportsPage() {
   const [reportData, setReportData] = useState<ReportData[] | null>(null);
   const [reportConfig, setReportConfig] = useState<ReportConfig | null>(null);
+  const [connections, setConnections] = useState<Connection[]>([]);
+  const [isLoadingConnections, setIsLoadingConnections] = useState(true);
+
+  useEffect(() => {
+    async function fetchConnections() {
+      try {
+        const response = await fetch('/api/connections');
+        if (!response.ok) {
+          throw new Error('Failed to fetch connections');
+        }
+        const data = await response.json();
+        setConnections(data);
+      } catch (error) {
+        console.error("Failed to fetch connections for reports:", error);
+      } finally {
+        setIsLoadingConnections(false);
+      }
+    }
+    fetchConnections();
+  }, []);
 
 
   const handleGenerateReport = (config: ReportConfig) => {
     setReportConfig(config);
-    const data = generateMockReportData(config);
+    const data = generateMockReportData(config, connections);
     setReportData(data);
   };
 
@@ -58,7 +78,11 @@ export default function ReportsPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-1">
-          <ReportForm onGenerateReport={handleGenerateReport} />
+          <ReportForm 
+            onGenerateReport={handleGenerateReport} 
+            connections={connections}
+            isLoading={isLoadingConnections}
+          />
         </div>
         <div className="lg:col-span-2">
             <ReportView data={reportData} config={reportConfig} />

@@ -41,7 +41,7 @@ import {
     CommandList,
   } from "@/components/ui/command"
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { initialConnections } from '@/app/configure/connections-data';
+import { Connection } from '@/app/configure/connections-data';
 
 const reportFormSchema = z.object({
   reportType: z.string({ required_error: 'Please select a report type.' }),
@@ -57,6 +57,8 @@ export type ReportConfig = z.infer<typeof reportFormSchema>;
 
 interface ReportFormProps {
   onGenerateReport: (data: ReportConfig) => void;
+  connections: Connection[];
+  isLoading: boolean;
 }
 
 const MOCK_DATA_POINTS = [
@@ -67,7 +69,7 @@ const MOCK_DATA_POINTS = [
     { value: "flow_rate", label: "Flow Rate" },
 ]
 
-export function ReportForm({ onGenerateReport }: ReportFormProps) {
+export function ReportForm({ onGenerateReport, connections, isLoading }: ReportFormProps) {
   const form = useForm<ReportConfig>({
     resolver: zodResolver(reportFormSchema),
     defaultValues: {
@@ -171,13 +173,16 @@ export function ReportForm({ onGenerateReport }: ReportFormProps) {
                         <Button
                           variant="outline"
                           role="combobox"
+                          disabled={isLoading}
                           className={cn(
                             "w-full justify-between",
                             !field.value?.length && "text-muted-foreground"
                           )}
                         >
                           <span className="truncate">
-                            {field.value?.length
+                            {isLoading
+                              ? "Loading..."
+                              : field.value?.length
                               ? `${field.value.length} selected`
                               : "Select connections"}
                           </span>
@@ -191,7 +196,7 @@ export function ReportForm({ onGenerateReport }: ReportFormProps) {
                         <CommandEmpty>No connections found.</CommandEmpty>
                         <CommandGroup>
                             <CommandList>
-                                {initialConnections.map((conn) => (
+                                {connections.map((conn) => (
                                     <CommandItem
                                     key={conn.id}
                                     onSelect={() => {

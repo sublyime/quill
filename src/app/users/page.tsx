@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { User, columns } from './columns';
 import { DataTable } from './data-table';
 import { Button } from '@/components/ui/button';
@@ -15,49 +15,33 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { UserForm } from './user-form';
-
-const initialUsers: User[] = [
-  {
-    id: 'usr_1',
-    name: 'John Doe',
-    email: 'john.doe@example.com',
-    role: 'Admin',
-    status: 'active',
-  },
-  {
-    id: 'usr_2',
-    name: 'Jane Smith',
-    email: 'jane.smith@example.com',
-    role: 'Editor',
-    status: 'active',
-  },
-  {
-    id: 'usr_3',
-    name: 'Sam Wilson',
-    email: 'sam.wilson@example.com',
-    role: 'Viewer',
-    status: 'inactive',
-  },
-  {
-    id: 'usr_4',
-    name: 'Alice Johnson',
-    email: 'alice.j@example.com',
-    role: 'Editor',
-    status: 'active',
-  },
-];
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function UsersPage() {
-  const [users, setUsers] = useState<User[]>(initialUsers);
+  const [users, setUsers] = useState<User[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const handleAddUser = (newUser: Omit<User, 'id' | 'status'>) => {
-    const userWithId: User = {
-      ...newUser,
-      id: `usr_${users.length + 1}`,
-      status: 'active',
-    };
-    setUsers((prevUsers) => [...prevUsers, userWithId]);
+  useEffect(() => {
+    async function fetchUsers() {
+      try {
+        const response = await fetch('/api/users');
+        if (!response.ok) {
+          throw new Error('Failed to fetch users');
+        }
+        const data = await response.json();
+        setUsers(data);
+      } catch (error) {
+        console.error(error);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    fetchUsers();
+  }, []);
+
+  const handleAddUser = (newUser: User) => {
+    setUsers((prevUsers) => [newUser, ...prevUsers]);
     setIsDialogOpen(false);
   };
 
@@ -90,7 +74,15 @@ export default function UsersPage() {
           </DialogContent>
         </Dialog>
       </div>
-      <DataTable columns={columns} data={users} />
+      {isLoading ? (
+         <div className="space-y-4">
+              <Skeleton className="h-12 w-full" />
+              <Skeleton className="h-12 w-full" />
+              <Skeleton className="h-12 w-full" />
+            </div>
+      ) : (
+        <DataTable columns={columns} data={users} filterColumn="name" filterPlaceholder="Filter users by name..." />
+      )}
     </div>
   );
 }
