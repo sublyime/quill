@@ -8,9 +8,8 @@ import {
   TabsTrigger,
 } from '@/components/ui/tabs';
 import { ConnectionForm } from './connection-form';
-import { ProtocolRecommender } from './protocol-recommender';
 import { ConnectionsList } from './connections-list';
-import { SlidersHorizontal, Bot, List } from 'lucide-react';
+import { SlidersHorizontal, List } from 'lucide-react';
 import { initialConnections, Connection } from './connections-data';
 
 export default function ConfigurePage() {
@@ -59,7 +58,7 @@ export default function ConfigurePage() {
       </div>
 
       <Tabs defaultValue="setup" className="w-full">
-        <TabsList className="grid w-full grid-cols-3 md:w-[600px]">
+        <TabsList className="grid w-full grid-cols-2 md:w-[400px]">
           <TabsTrigger value="setup">
             <SlidersHorizontal className="mr-2 h-4 w-4" />
             Connection Setup
@@ -68,19 +67,12 @@ export default function ConfigurePage() {
             <List className="mr-2 h-4 w-4" />
             Connections
           </TabsTrigger>
-          <TabsTrigger value="ai-helper">
-            <Bot className="mr-2 h-4 w-4" />
-            AI Protocol Helper
-          </TabsTrigger>
         </TabsList>
         <TabsContent value="setup" className="mt-6">
           <ConnectionForm onAddConnection={addConnection} />
         </TabsContent>
         <TabsContent value="connections" className="mt-6">
           <ConnectionsList connections={connections} />
-        </TabsContent>
-        <TabsContent value="ai-helper" className="mt-6">
-          <ProtocolRecommender />
         </TabsContent>
       </Tabs>
     </div>
