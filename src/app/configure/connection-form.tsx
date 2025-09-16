@@ -27,6 +27,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from '@/hooks/use-toast';
 import { DATA_SOURCE_CONFIGS, DataSourceType } from '@/lib/data-sources';
+import { Connection } from './connections-data';
 
 const formSchema = z.object({
   connectionName: z.string().min(2, "Connection name must be at least 2 characters."),
@@ -34,7 +35,11 @@ const formSchema = z.object({
   config: z.record(z.string().or(z.number())).optional(),
 });
 
-export function ConnectionForm() {
+interface ConnectionFormProps {
+    onAddConnection: (connection: Connection) => void;
+}
+
+export function ConnectionForm({ onAddConnection }: ConnectionFormProps) {
   const [selectedType, setSelectedType] = useState<DataSourceType | null>(null);
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -47,20 +52,22 @@ export function ConnectionForm() {
   const currentFields = selectedType ? DATA_SOURCE_CONFIGS[selectedType]?.fields : [];
 
   function onSubmit(values: z.infer<typeof formSchema>) {
-    const finalValues = { ...values, config: {} };
-    if (selectedType) {
-        currentFields.forEach(field => {
-            // @ts-ignore
-            finalValues.config[field.name] = form.getValues(`config.${field.name}`);
-        });
-    }
-
-    console.log('Form submitted:', finalValues);
+    const newConnection: Connection = {
+        id: `conn_${Date.now()}`,
+        name: values.connectionName,
+        sourceType: values.dataSourceType as Connection['sourceType'],
+        status: 'online',
+        lastActivity: new Date().toISOString(),
+    };
+    onAddConnection(newConnection);
+    
     toast({
       title: 'Configuration Saved',
-      description: 'Your data source configuration has been successfully saved.',
+      description: `Connection "${values.connectionName}" has been successfully created.`,
     });
+
     form.reset();
+    form.setValue('dataSourceType', '');
     setSelectedType(null);
   }
 
@@ -101,7 +108,7 @@ export function ConnectionForm() {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Data Source Type</FormLabel>
-                  <Select onValueChange={(value) => handleTypeChange(value as DataSourceType)} defaultValue={field.value}>
+                  <Select onValueChange={(value) => handleTypeChange(value as DataSourceType)} value={field.value || ''}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Select a data source type" />

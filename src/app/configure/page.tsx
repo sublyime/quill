@@ -1,4 +1,6 @@
+'use client';
 
+import { useState, useEffect } from 'react';
 import {
   Tabs,
   TabsContent,
@@ -9,8 +11,44 @@ import { ConnectionForm } from './connection-form';
 import { ProtocolRecommender } from './protocol-recommender';
 import { ConnectionsList } from './connections-list';
 import { SlidersHorizontal, Bot, List } from 'lucide-react';
+import { initialConnections, Connection } from './connections-data';
 
 export default function ConfigurePage() {
+  const [connections, setConnections] = useState<Connection[]>(initialConnections);
+
+  const addConnection = (newConnection: Connection) => {
+    setConnections(prev => [newConnection, ...prev]);
+  };
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setConnections((currentConnections) => {
+        if (currentConnections.length === 0) {
+          clearInterval(interval);
+          return currentConnections;
+        }
+        
+        const randomIndex = Math.floor(Math.random() * currentConnections.length);
+        const randomConnection = currentConnections[randomIndex];
+        const statuses: Connection['status'][] = ['online', 'offline', 'error'];
+        
+        // Ensure the new status is different from the old one
+        let newStatus: Connection['status'];
+        do {
+            newStatus = statuses[Math.floor(Math.random() * statuses.length)];
+        } while (newStatus === randomConnection.status);
+
+        return currentConnections.map((conn, index) =>
+          index === randomIndex
+            ? { ...conn, status: newStatus, lastActivity: new Date().toISOString() }
+            : conn
+        );
+      });
+    }, 3000); // Update every 3 seconds
+
+    return () => clearInterval(interval);
+  }, []); // Run only once
+
   return (
     <div className="flex flex-col gap-6">
       <div className="space-y-1">
@@ -36,10 +74,10 @@ export default function ConfigurePage() {
           </TabsTrigger>
         </TabsList>
         <TabsContent value="setup" className="mt-6">
-          <ConnectionForm />
+          <ConnectionForm onAddConnection={addConnection} />
         </TabsContent>
         <TabsContent value="connections" className="mt-6">
-          <ConnectionsList />
+          <ConnectionsList connections={connections} />
         </TabsContent>
         <TabsContent value="ai-helper" className="mt-6">
           <ProtocolRecommender />
