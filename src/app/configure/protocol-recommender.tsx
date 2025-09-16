@@ -1,6 +1,6 @@
 'use client';
 
-import { useActionState, useFormStatus } from 'react';
+import { useActionState, useFormStatus } from 'react-dom';
 import { getProtocolSuggestion } from '@/app/actions';
 
 import { Button } from '@/components/ui/button';
