@@ -1,5 +1,7 @@
+
 'use client';
 
+import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -17,6 +19,8 @@ import { LogOut, User, Settings } from 'lucide-react';
 const pathToTitle: { [key: string]: string } = {
   '/': 'Dashboard',
   '/configure': 'Configuration',
+  '/users': 'User Management',
+  '/profile': 'User Profile',
 };
 
 export function Header() {
@@ -49,10 +53,12 @@ export function Header() {
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>
-              <User className="mr-2 h-4 w-4" />
-              <span>Profile</span>
-            </DropdownMenuItem>
+            <Link href="/profile" passHref>
+              <DropdownMenuItem>
+                <User className="mr-2 h-4 w-4" />
+                <span>Profile</span>
+              </DropdownMenuItem>
+            </Link>
             <DropdownMenuItem>
               <Settings className="mr-2 h-4 w-4" />
               <span>Settings</span>

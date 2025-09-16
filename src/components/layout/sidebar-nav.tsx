@@ -12,7 +12,7 @@ import {
   SidebarFooter,
 } from '@/components/ui/sidebar';
 import { cn } from '@/lib/utils';
-import { Home, Settings, Feather, LifeBuoy, LogOut, Users } from 'lucide-react';
+import { Home, Settings, Feather, LifeBuoy, LogOut, Users, User } from 'lucide-react';
 
 const menuItems = [
   { href: '/', label: 'Dashboard', icon: Home },
@@ -36,21 +36,18 @@ export function SidebarNav() {
       <SidebarContent className="p-2">
         <SidebarMenu>
           {menuItems.map((item) => (
-            <SidebarMenuItem key={item.href}>
-              <Link href={item.href}>
-                <SidebarMenuButton
-                  isActive={pathname === item.href}
-                  tooltip={{ children: item.label }}
-                  className={cn(
-                    'justify-start',
-                    pathname === item.href && 'bg-accent text-accent-foreground'
-                  )}
-                >
-                  <item.icon className="h-5 w-5" />
-                  <span className="group-data-[collapsible=icon]:hidden">{item.label}</span>
-                </SidebarMenuButton>
-              </Link>
-            </SidebarMenuItem>
+             <Link href={item.href} key={item.href} passHref>
+                <SidebarMenuItem>
+                    <SidebarMenuButton
+                    isActive={pathname === item.href}
+                    tooltip={{ children: item.label }}
+                    className="justify-start"
+                    >
+                    <item.icon className="h-5 w-5" />
+                    <span className="group-data-[collapsible=icon]:hidden">{item.label}</span>
+                    </SidebarMenuButton>
+                </SidebarMenuItem>
+            </Link>
           ))}
         </SidebarMenu>
       </SidebarContent>
