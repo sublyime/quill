@@ -87,7 +87,7 @@ export function TerminalView() {
                     className="text-xs leading-relaxed"
                 >
                     {log}
-                </motion.iv>
+                </motion.div>
             ))}
         </AnimatePresence>
         <div ref={endOfLogsRef} />
