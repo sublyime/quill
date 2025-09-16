@@ -21,6 +21,7 @@ const pathToTitle: { [key: string]: string } = {
   '/configure': 'Configuration',
   '/users': 'User Management',
   '/profile': 'User Profile',
+  '/storage': 'Storage',
 };
 
 export function Header() {
