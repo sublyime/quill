@@ -1,6 +1,8 @@
 
+
 import { HardDrive, Cloud, Server as ServerIcon } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
+import React from 'react';
 
 // Custom simple icons for cloud providers
 const AwsIcon = () => (
@@ -25,7 +27,7 @@ const AzureIcon = () => (
 
 const OracleIcon = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zM8.28 15.96A4.5 4.5 0 0012 17.5c2.49 0 4.5-2.01 4.5-4.5S14.49 8.5 12 8.5a4.5 4.5 0 00-3.72 1.54l1.24 1.24A2.5 2.5 0 0112 9.5c1.38 0 2.5 1.12 2.5 2.5s-1.12 2.5-2.5 2.5a2.5 2.5 0 01-2.02-1.04l-1.7 1.5z" fill="#F80000"/>
+    <path fillRule="evenodd" clipRule="evenodd" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zM8.28 15.96A4.5 4.5 0 0012 17.5c2.49 0 4.5-2.01 4.5-4.5S14.49 8.5 12 8.5a4.5 4.5 0 00-3.72 1.54l1.24 1.24A2.5 2.5 0 0112 9.5c1.38 0 2.5 1.12 2.5 2.5s-1.12 2.5-2.5 2.5a2.5 2.5 0 01-2.02-1.04l-1.7 1.5z" fill="#F80000"/>
   </svg>
 );
 

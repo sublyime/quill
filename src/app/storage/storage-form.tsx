@@ -137,7 +137,7 @@ export function StorageForm() {
                             <Input
                             placeholder={configField.placeholder}
                             type={configField.type}
-                            {...field}
+                            {...props}
                             />
                         </FormControl>
                         <FormMessage />
