@@ -12,13 +12,14 @@ import {
   SidebarFooter,
 } from '@/components/ui/sidebar';
 import { cn } from '@/lib/utils';
-import { Home, Settings, Feather, LifeBuoy, LogOut, Users, User, Database } from 'lucide-react';
+import { Home, Settings, Feather, LifeBuoy, LogOut, Users, User, Database, FileText } from 'lucide-react';
 
 const menuItems = [
   { href: '/', label: 'Dashboard', icon: Home },
   { href: '/configure', label: 'Configuration', icon: Settings },
   { href: '/users', label: 'Users', icon: Users },
   { href: '/storage', label: 'Storage', icon: Database },
+  { href: '/reports', label: 'Reports', icon: FileText },
 ];
 
 export function SidebarNav() {
