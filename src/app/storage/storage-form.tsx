@@ -30,7 +30,7 @@ import {
 } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from '@/hooks/use-toast';
-import { STORAGE_CONFIGS, StorageType } from '@/lib/storage-types';
+import { STORAGE_CONFIGS, StorageType } from '@/lib/storage-types.tsx';
 
 const formSchema = z.object({
   storageType: z.string({ required_error: 'Please select a storage type.' }),
@@ -137,7 +137,7 @@ export function StorageForm() {
                             <Input
                             placeholder={configField.placeholder}
                             type={configField.type}
-                            {...props}
+                            {...field}
                             />
                         </FormControl>
                         <FormMessage />

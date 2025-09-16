@@ -1,8 +1,7 @@
 
-
+import React from 'react';
 import { HardDrive, Cloud, Server as ServerIcon } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
-import React from 'react';
 
 // Custom simple icons for cloud providers
 const AwsIcon = () => (
