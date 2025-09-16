@@ -37,7 +37,6 @@ export function SidebarNav() {
             <SidebarMenuItem key={item.href}>
               <Link href={item.href} passHref>
                 <SidebarMenuButton
-                  asChild
                   isActive={pathname === item.href}
                   tooltip={{ children: item.label }}
                   className={cn(
@@ -45,10 +44,8 @@ export function SidebarNav() {
                     pathname === item.href && 'bg-accent text-accent-foreground'
                   )}
                 >
-                  <span>
-                    <item.icon className="h-5 w-5" />
-                    <span className="group-data-[collapsible=icon]:hidden">{item.label}</span>
-                  </span>
+                  <item.icon className="h-5 w-5" />
+                  <span className="group-data-[collapsible=icon]:hidden">{item.label}</span>
                 </SidebarMenuButton>
               </Link>
             </SidebarMenuItem>
