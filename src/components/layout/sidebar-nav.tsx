@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -11,11 +12,12 @@ import {
   SidebarFooter,
 } from '@/components/ui/sidebar';
 import { cn } from '@/lib/utils';
-import { Home, Settings, Feather, LifeBuoy, LogOut } from 'lucide-react';
+import { Home, Settings, Feather, LifeBuoy, LogOut, Users } from 'lucide-react';
 
 const menuItems = [
   { href: '/', label: 'Dashboard', icon: Home },
   { href: '/configure', label: 'Configuration', icon: Settings },
+  { href: '/users', label: 'Users', icon: Users },
 ];
 
 export function SidebarNav() {
