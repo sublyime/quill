@@ -1,56 +1,46 @@
 package com.quill.backend.model;
 
 import jakarta.persistence.*;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-import lombok.AllArgsConstructor;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import java.time.LocalDateTime;
-import java.util.HashSet;
 import java.util.Set;
+import java.util.HashSet;
 
 @Entity
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
-@Table(name = "app_users")
+@Table(name = "users")
 public class User {
     
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     
-    @Column(unique = true, nullable = false)
+    @Column(nullable = false, unique = true)
     private String username;
     
-    @Column(unique = true, nullable = false)
+    @Column(nullable = false, unique = true)
     private String email;
     
     @Column(nullable = false)
-    private String password; // In production, this should be hashed
+    private String password;
     
     private String firstName;
     private String lastName;
     private String phone;
-    private String department;
-    private String jobTitle;
-    private String avatarUrl;
     
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private UserStatus status = UserStatus.ACTIVE;
-    
     @ElementCollection(fetch = FetchType.EAGER)
-    @Enumerated(EnumType.STRING)
     @CollectionTable(name = "user_roles", joinColumns = @JoinColumn(name = "user_id"))
     @Column(name = "role")
     private Set<UserRole> roles = new HashSet<>();
     
-    @ElementCollection(fetch = FetchType.EAGER)
     @Enumerated(EnumType.STRING)
+    @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "user_permissions", joinColumns = @JoinColumn(name = "user_id"))
     @Column(name = "permission")
     private Set<Permission> permissions = new HashSet<>();
+    
+    @Enumerated(EnumType.STRING)
+    private UserStatus status = UserStatus.ACTIVE;
     
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime createdAt = LocalDateTime.now();
@@ -58,55 +48,63 @@ public class User {
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime updatedAt = LocalDateTime.now();
     
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
-    private LocalDateTime lastLoginAt;
+    // Constructors
+    public User() {}
     
-    // User Status Enum
+    public User(String username, String email, String password) {
+        this.username = username;
+        this.email = email;
+        this.password = password;
+    }
+    
+    // Getters and Setters
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
+    
+    public String getUsername() { return username; }
+    public void setUsername(String username) { this.username = username; }
+    
+    public String getEmail() { return email; }
+    public void setEmail(String email) { this.email = email; }
+    
+    public String getPassword() { return password; }
+    public void setPassword(String password) { this.password = password; }
+    
+    public String getFirstName() { return firstName; }
+    public void setFirstName(String firstName) { this.firstName = firstName; }
+    
+    public String getLastName() { return lastName; }
+    public void setLastName(String lastName) { this.lastName = lastName; }
+    
+    public String getPhone() { return phone; }
+    public void setPhone(String phone) { this.phone = phone; }
+    
+    public Set<UserRole> getRoles() { return roles; }
+    public void setRoles(Set<UserRole> roles) { this.roles = roles; }
+    
+    public Set<Permission> getPermissions() { return permissions; }
+    public void setPermissions(Set<Permission> permissions) { this.permissions = permissions; }
+    
+    public UserStatus getStatus() { return status; }
+    public void setStatus(UserStatus status) { this.status = status; }
+    
+    public LocalDateTime getCreatedAt() { return createdAt; }
+    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+    
+    public LocalDateTime getUpdatedAt() { return updatedAt; }
+    public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
+    
+    // Enums
+    public enum UserRole {
+        ADMIN, EDITOR, VIEWER, MANAGER, ANALYST
+    }
+    
+    public enum Permission {
+        READ, WRITE, DELETE, ADMIN, MANAGE_USERS, MANAGE_STORAGE, MANAGE_CONNECTIONS
+    }
+    
     public enum UserStatus {
         ACTIVE, INACTIVE, SUSPENDED, PENDING
-    }
-    
-    // User Roles Enum
-    public enum UserRole {
-        ADMIN, MANAGER, EDITOR, VIEWER, ANALYST, TECHNICIAN
-    }
-    
-    // Permission Enum
-    public enum Permission {
-        // Data Source Management
-        VIEW_CONNECTIONS, CREATE_CONNECTIONS, EDIT_CONNECTIONS, DELETE_CONNECTIONS,
-        
-        // Data Management
-        VIEW_DATA, EXPORT_DATA, IMPORT_DATA, DELETE_DATA,
-        
-        // User Management
-        VIEW_USERS, CREATE_USERS, EDIT_USERS, DELETE_USERS, MANAGE_PERMISSIONS,
-        
-        // System Management
-        VIEW_SYSTEM_LOGS, MANAGE_SYSTEM_SETTINGS, BACKUP_RESTORE, VIEW_ANALYTICS,
-        
-        // Reports
-        VIEW_REPORTS, CREATE_REPORTS, EDIT_REPORTS, DELETE_REPORTS, EXPORT_REPORTS
-    }
-    
-    // Helper methods
-    public String getFullName() {
-        if (firstName != null && lastName != null) {
-            return firstName + " " + lastName;
-        } else if (firstName != null) {
-            return firstName;
-        } else if (lastName != null) {
-            return lastName;
-        }
-        return username;
-    }
-    
-    public boolean hasRole(UserRole role) {
-        return roles.contains(role);
-    }
-    
-    public boolean hasPermission(Permission permission) {
-        return permissions.contains(permission);
     }
     
     @PreUpdate

@@ -14,12 +14,9 @@ public interface StorageConfigRepository extends JpaRepository<StorageConfig, Lo
     
     List<StorageConfig> findByIsActiveTrue();
     
-    List<StorageConfig> findByStorageType(StorageConfig.StorageType storageType);
-    
-    List<StorageConfig> findByStatus(StorageConfig.StorageStatus status);
+    @Query("SELECT COUNT(s) FROM StorageConfig s WHERE s.isActive = true")
+    long countByIsActiveTrue();
     
     @Query("SELECT s FROM StorageConfig s ORDER BY s.isDefault DESC, s.isActive DESC, s.createdAt DESC")
     List<StorageConfig> findAllOrderedByPriority();
-    
-    long countByIsActiveTrue();
 }

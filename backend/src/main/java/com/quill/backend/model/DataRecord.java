@@ -1,17 +1,10 @@
 package com.quill.backend.model;
 
 import jakarta.persistence.*;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-import lombok.AllArgsConstructor;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import java.time.LocalDateTime;
-import java.util.Map;
 
 @Entity
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
 @Table(name = "data_records", indexes = {
     @Index(name = "idx_timestamp", columnList = "timestamp"),
     @Index(name = "idx_source_timestamp", columnList = "sourceId, timestamp"),
@@ -24,20 +17,20 @@ public class DataRecord {
     private Long id;
     
     @Column(nullable = false)
-    private String sourceId; // Connection ID that generated this data
+    private String sourceId;
     
     @Column(nullable = false)
-    private String dataType; // e.g., "sensor_reading", "system_status", etc.
+    private String dataType;
     
     @Column(length = 4000)
-    private String payload; // JSON string of the actual data
+    private String payload;
     
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     @Column(nullable = false)
     private LocalDateTime timestamp = LocalDateTime.now();
     
     @Column(length = 1000)
-    private String metadata; // Additional metadata as JSON
+    private String metadata;
     
     @Enumerated(EnumType.STRING)
     private DataStatus status = DataStatus.ACTIVE;
@@ -46,7 +39,44 @@ public class DataRecord {
     private LocalDateTime createdAt = LocalDateTime.now();
     
     @Column(name = "storage_config_id")
-    private Long storageConfigId; // Which storage config was used
+    private Long storageConfigId;
+    
+    // Constructors
+    public DataRecord() {}
+    
+    public DataRecord(String sourceId, String dataType, String payload) {
+        this.sourceId = sourceId;
+        this.dataType = dataType;
+        this.payload = payload;
+    }
+    
+    // Getters and Setters
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
+    
+    public String getSourceId() { return sourceId; }
+    public void setSourceId(String sourceId) { this.sourceId = sourceId; }
+    
+    public String getDataType() { return dataType; }
+    public void setDataType(String dataType) { this.dataType = dataType; }
+    
+    public String getPayload() { return payload; }
+    public void setPayload(String payload) { this.payload = payload; }
+    
+    public LocalDateTime getTimestamp() { return timestamp; }
+    public void setTimestamp(LocalDateTime timestamp) { this.timestamp = timestamp; }
+    
+    public String getMetadata() { return metadata; }
+    public void setMetadata(String metadata) { this.metadata = metadata; }
+    
+    public DataStatus getStatus() { return status; }
+    public void setStatus(DataStatus status) { this.status = status; }
+    
+    public LocalDateTime getCreatedAt() { return createdAt; }
+    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+    
+    public Long getStorageConfigId() { return storageConfigId; }
+    public void setStorageConfigId(Long storageConfigId) { this.storageConfigId = storageConfigId; }
     
     // Data Status Enum
     public enum DataStatus {

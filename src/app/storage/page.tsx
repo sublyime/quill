@@ -1,352 +1,329 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { 
-  Plus, 
-  Database, 
-  Cloud, 
-  Activity, 
-  BarChart3,
-  Download,
-  Upload,
-  Settings,
-  Trash2
-} from 'lucide-react';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
-import { StorageForm } from './storage-form';
-import { StorageList } from './storage-list';
-import { StorageMonitoring } from './storage-monitoring';
-import { DataVisualization } from './data-visualization';
-import { BackupRestore } from './backup-restore';
 import { toast } from '@/hooks/use-toast';
+import { Plus, Settings, Trash2, TestTube, CheckCircle, XCircle, Clock } from 'lucide-react';
+import Link from 'next/link';
+import { STORAGE_CONFIGS } from './storage-types';
 
 interface StorageConfig {
   id: number;
   name: string;
   storageType: string;
-  configuration: string;
-  status: string;
-  isActive: boolean;
+  configuration: any;
+  status: 'ACTIVE' | 'INACTIVE' | 'ERROR' | 'TESTING';
   isDefault: boolean;
+  isActive: boolean;
   createdAt: string;
+  updatedAt: string;
   lastTestedAt?: string;
   lastTestResult?: string;
-  lastError?: string;
-}
-
-interface StorageStats {
-  totalConfigurations: number;
-  activeConfigurations: number;
-  hasDefaultStorage: boolean;
-  defaultStorageType: string;
 }
 
 export default function StoragePage() {
-  const [storages, setStorages] = useState<StorageConfig[]>([]);
-  const [stats, setStats] = useState<StorageStats | null>(null);
+  const [storageConfigs, setStorageConfigs] = useState<StorageConfig[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingStorage, setEditingStorage] = useState<StorageConfig | null>(null);
-  const [activeTab, setActiveTab] = useState('overview');
+  const [testingIds, setTestingIds] = useState<Set<number>>(new Set());
 
-  const fetchStorages = async () => {
+  useEffect(() => {
+    fetchStorageConfigs();
+  }, []);
+
+  const fetchStorageConfigs = async () => {
     try {
-      const response = await fetch('http://localhost:8080/api/storage', {
-        method: 'GET',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch('http://localhost:8080/api/storage');
+      if (response.ok) {
+        const data = await response.json();
+        setStorageConfigs(data);
+      } else {
+        console.error('Failed to fetch storage configurations');
+        toast({
+          title: 'Error',
+          description: 'Failed to load storage configurations. Make sure the backend server is running.',
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching storage configurations:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to connect to the backend server.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const testConnection = async (id: number) => {
+    setTestingIds(prev => new Set(prev).add(id));
+    
+    try {
+      const response = await fetch(`http://localhost:8080/api/storage/${id}/test`, {
+        method: 'POST'
+      });
+      
+      if (response.ok) {
+        const updatedConfig = await response.json();
+        setStorageConfigs(prev => 
+          prev.map(config => config.id === id ? updatedConfig : config)
+        );
+        
+        toast({
+          title: 'Connection Test',
+          description: updatedConfig.lastTestResult || 'Connection test completed',
+        });
+      } else {
+        toast({
+          title: 'Test Failed',
+          description: 'Failed to test storage connection',
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
+      toast({
+        title: 'Test Failed',
+        description: 'Failed to test storage connection',
+        variant: 'destructive',
+      });
+    } finally {
+      setTestingIds(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(id);
+        return newSet;
+      });
+    }
+  };
+
+  const deleteStorage = async (id: number, name: string) => {
+    if (!confirm(`Are you sure you want to delete "${name}"? This action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`http://localhost:8080/api/storage/${id}`, {
+        method: 'DELETE'
       });
 
       if (response.ok) {
-        const data = await response.json();
-        setStorages(data);
+        setStorageConfigs(prev => prev.filter(config => config.id !== id));
+        toast({
+          title: 'Storage Deleted',
+          description: `"${name}" has been successfully deleted.`,
+        });
       } else {
-        throw new Error('Failed to fetch storage configurations');
+        toast({
+          title: 'Delete Failed',
+          description: 'Failed to delete storage configuration',
+          variant: 'destructive',
+        });
       }
-    } catch (error: any) {
-      console.error('Error fetching storages:', error);
+    } catch (error) {
       toast({
-        title: 'Error',
-        description: 'Failed to load storage configurations.',
+        title: 'Delete Failed',
+        description: 'Failed to delete storage configuration',
         variant: 'destructive',
       });
     }
   };
 
-  const fetchStats = async () => {
+  const setAsDefault = async (id: number, name: string) => {
     try {
-      const response = await fetch('http://localhost:8080/api/storage/stats', {
-        method: 'GET',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch(`http://localhost:8080/api/storage/${id}/set-default`, {
+        method: 'POST'
       });
 
       if (response.ok) {
-        const data = await response.json();
-        setStats(data);
+        const updatedConfig = await response.json();
+        
+        // Update all configs to remove default, then set the new one
+        setStorageConfigs(prev => 
+          prev.map(config => ({
+            ...config,
+            isDefault: config.id === id
+          }))
+        );
+        
+        toast({
+          title: 'Default Set',
+          description: `"${name}" is now the default storage configuration.`,
+        });
+      } else {
+        toast({
+          title: 'Update Failed',
+          description: 'Failed to set default storage configuration',
+          variant: 'destructive',
+        });
       }
-    } catch (error: any) {
-      console.error('Error fetching storage stats:', error);
+    } catch (error) {
+      toast({
+        title: 'Update Failed',
+        description: 'Failed to set default storage configuration',
+        variant: 'destructive',
+      });
     }
   };
 
-  useEffect(() => {
-    const loadData = async () => {
-      setIsLoading(true);
-      await Promise.all([fetchStorages(), fetchStats()]);
-      setIsLoading(false);
-    };
-    loadData();
-  }, []);
-
-  const handleStorageChange = () => {
-    fetchStorages();
-    fetchStats();
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'ACTIVE':
+        return <CheckCircle className="h-4 w-4 text-green-500" />;
+      case 'ERROR':
+        return <XCircle className="h-4 w-4 text-red-500" />;
+      case 'TESTING':
+        return <Clock className="h-4 w-4 text-yellow-500" />;
+      default:
+        return <XCircle className="h-4 w-4 text-gray-400" />;
+    }
   };
 
-  const handleAddStorage = (storage: StorageConfig) => {
-    handleStorageChange();
-    setIsDialogOpen(false);
-    setEditingStorage(null);
-  };
-
-  const handleEditStorage = (storage: StorageConfig) => {
-    setEditingStorage(storage);
-    setIsDialogOpen(true);
-  };
-
-  const closeDialog = () => {
-    setIsDialogOpen(false);
-    setEditingStorage(null);
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'ACTIVE':
+        return 'bg-green-100 text-green-800';
+      case 'ERROR':
+        return 'bg-red-100 text-red-800';
+      case 'TESTING':
+        return 'bg-yellow-100 text-yellow-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
   };
 
   if (isLoading) {
     return (
-      <div className="container mx-auto py-6 space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold">Storage Management</h1>
-            <p className="text-muted-foreground">Loading storage configurations...</p>
+      <div className="container mx-auto p-6">
+        <div className="flex justify-center items-center h-64">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
+            <p className="mt-4 text-muted-foreground">Loading storage configurations...</p>
           </div>
-        </div>
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-          {[...Array(4)].map((_, i) => (
-            <Card key={i} className="animate-pulse">
-              <CardHeader>
-                <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-              </CardHeader>
-              <CardContent>
-                <div className="h-8 bg-gray-200 rounded"></div>
-              </CardContent>
-            </Card>
-          ))}
         </div>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+    <div className="container mx-auto p-6">
+      <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-3xl font-bold">Storage Management</h1>
-          <p className="text-muted-foreground">
-            Configure and manage your data storage solutions.
-          </p>
+          <h1 className="text-3xl font-bold">Storage Configurations</h1>
+          <p className="text-muted-foreground">Manage your data storage providers and configurations.</p>
         </div>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button onClick={() => setEditingStorage(null)}>
-              <Plus className="mr-2 h-4 w-4" />
-              Add Storage
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>
-                {editingStorage ? 'Edit Storage Configuration' : 'Add Storage Configuration'}
-              </DialogTitle>
-              <DialogDescription>
-                {editingStorage 
-                  ? 'Update your storage configuration settings.'
-                  : 'Configure a new storage solution for your data.'
-                }
-              </DialogDescription>
-            </DialogHeader>
-            <StorageForm
-              onStorageAdded={handleAddStorage}
-              onCancel={closeDialog}
-              editingStorage={editingStorage}
-            />
-          </DialogContent>
-        </Dialog>
+        <Link href="/storage/new">
+          <Button>
+            <Plus className="mr-2 h-4 w-4" />
+            Add Storage Configuration
+          </Button>
+        </Link>
       </div>
 
-      {/* Stats Cards */}
-      {stats && (
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Configurations</CardTitle>
-              <Database className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.totalConfigurations}</div>
-              <p className="text-xs text-muted-foreground">
-                Storage configurations available
+      {storageConfigs.length === 0 ? (
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-16">
+            <div className="text-center">
+              <Settings className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+              <h2 className="text-xl font-semibold mb-2">No Storage Configurations</h2>
+              <p className="text-muted-foreground mb-4">
+                Get started by adding your first storage configuration to begin storing your data.
               </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Active Storages</CardTitle>
-              <Activity className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.activeConfigurations}</div>
-              <p className="text-xs text-muted-foreground">
-                Currently active and ready
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Default Storage</CardTitle>
-              <Cloud className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {stats.hasDefaultStorage ? (
-                  <Badge className="text-xs">{stats.defaultStorageType}</Badge>
-                ) : (
-                  <span className="text-muted-foreground">None</span>
-                )}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Primary storage system
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Health Status</CardTitle>
-              <BarChart3 className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                <Badge variant={stats.activeConfigurations > 0 ? "default" : "secondary"}>
-                  {stats.activeConfigurations > 0 ? "Healthy" : "Inactive"}
-                </Badge>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Overall system status
-              </p>
-            </CardContent>
-          </Card>
+              <Link href="/storage/new">
+                <Button>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add Your First Storage Configuration
+                </Button>
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {storageConfigs.map((config) => {
+            const storageTypeConfig = STORAGE_CONFIGS[config.storageType as keyof typeof STORAGE_CONFIGS];
+            const isTestingThis = testingIds.has(config.id);
+            
+            return (
+              <Card key={config.id} className="flex flex-col">
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <span className="text-2xl">{storageTypeConfig?.icon || '💾'}</span>
+                      <div>
+                        <CardTitle className="text-lg">{config.name}</CardTitle>
+                        <p className="text-sm text-muted-foreground">
+                          {storageTypeConfig?.name || config.storageType}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      {config.isDefault && (
+                        <Badge variant="default" className="text-xs">Default</Badge>
+                      )}
+                      <Badge className={`text-xs ${getStatusColor(config.status)}`}>
+                        <div className="flex items-center space-x-1">
+                          {getStatusIcon(config.status)}
+                          <span>{config.status}</span>
+                        </div>
+                      </Badge>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="flex-1 flex flex-col justify-between">
+                  <div className="space-y-2 mb-4">
+                    <div className="text-sm">
+                      <span className="font-medium">Created:</span>{' '}
+                      {new Date(config.createdAt).toLocaleDateString()}
+                    </div>
+                    {config.lastTestedAt && (
+                      <div className="text-sm">
+                        <span className="font-medium">Last Tested:</span>{' '}
+                        {new Date(config.lastTestedAt).toLocaleDateString()}
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div className="flex justify-between space-x-2">
+                    <div className="flex space-x-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => testConnection(config.id)}
+                        disabled={isTestingThis}
+                      >
+                        {isTestingThis ? (
+                          <Clock className="h-3 w-3 mr-1 animate-spin" />
+                        ) : (
+                          <TestTube className="h-3 w-3 mr-1" />
+                        )}
+                        Test
+                      </Button>
+                      {!config.isDefault && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setAsDefault(config.id, config.name)}
+                        >
+                          Set Default
+                        </Button>
+                      )}
+                    </div>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => deleteStorage(config.id, config.name)}
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       )}
-
-      {/* Tabs for different views */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-5">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="monitoring">Monitoring</TabsTrigger>
-          <TabsTrigger value="data">Data</TabsTrigger>
-          <TabsTrigger value="backup">Backup</TabsTrigger>
-          <TabsTrigger value="settings">Settings</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="overview" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Storage Configurations</CardTitle>
-              <div className="text-sm text-muted-foreground">
-                Manage your storage solutions and their configurations.
-              </div>
-            </CardHeader>
-            <CardContent>
-              <StorageList
-                storages={storages}
-                onStorageChange={handleStorageChange}
-                onEdit={handleEditStorage}
-              />
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="monitoring" className="space-y-6">
-          <StorageMonitoring storages={storages} />
-        </TabsContent>
-
-        <TabsContent value="data" className="space-y-6">
-          <DataVisualization />
-        </TabsContent>
-
-        <TabsContent value="backup" className="space-y-6">
-          <BackupRestore storages={storages} />
-        </TabsContent>
-
-        <TabsContent value="settings" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Storage Settings</CardTitle>
-              <div className="text-sm text-muted-foreground">
-                Global storage configuration and maintenance options.
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between p-4 border rounded-lg">
-                <div>
-                  <h4 className="font-medium">Auto-cleanup Old Data</h4>
-                  <p className="text-sm text-muted-foreground">
-                    Automatically remove data older than 30 days
-                  </p>
-                </div>
-                <Button variant="outline" size="sm">
-                  Configure
-                </Button>
-              </div>
-
-              <div className="flex items-center justify-between p-4 border rounded-lg">
-                <div>
-                  <h4 className="font-medium">Storage Monitoring</h4>
-                  <p className="text-sm text-muted-foreground">
-                    Enable real-time storage health monitoring
-                  </p>
-                </div>
-                <Button variant="outline" size="sm">
-                  Enable
-                </Button>
-              </div>
-
-              <div className="flex items-center justify-between p-4 border rounded-lg">
-                <div>
-                  <h4 className="font-medium">Data Encryption</h4>
-                  <p className="text-sm text-muted-foreground">
-                    Encrypt data at rest in all storage systems
-                  </p>
-                </div>
-                <Button variant="outline" size="sm">
-                  Configure
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
     </div>
   );
 }

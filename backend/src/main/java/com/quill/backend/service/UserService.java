@@ -8,6 +8,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.HashSet;
 
 @Service
 public class UserService {
@@ -15,178 +16,365 @@ public class UserService {
     @Autowired
     private UserRepository userRepository;
     
-    // Basic CRUD Operations
+    // Find all users
     public List<User> findAll() {
         return userRepository.findAll();
     }
     
+    // Find user by ID
     public Optional<User> findById(Long id) {
         return userRepository.findById(id);
     }
     
+    // Find user by username
     public Optional<User> findByUsername(String username) {
         return userRepository.findByUsername(username);
     }
     
+    // Find user by email
     public Optional<User> findByEmail(String email) {
         return userRepository.findByEmail(email);
     }
     
-    public User save(User user) {
-        // Set default roles if none provided
-        if (user.getRoles().isEmpty()) {
-            user.getRoles().add(User.UserRole.VIEWER);
-        }
-        
-        // Set default permissions based on roles
-        updatePermissionsFromRoles(user);
-        
-        return userRepository.save(user);
-    }
-    
-    public User update(Long id, User updatedUser) {
-        Optional<User> existingUser = userRepository.findById(id);
-        if (existingUser.isPresent()) {
-            User user = existingUser.get();
-            
-            // Update fields
-            user.setUsername(updatedUser.getUsername());
-            user.setEmail(updatedUser.getEmail());
-            user.setFirstName(updatedUser.getFirstName());
-            user.setLastName(updatedUser.getLastName());
-            user.setPhone(updatedUser.getPhone());
-            user.setDepartment(updatedUser.getDepartment());
-            user.setJobTitle(updatedUser.getJobTitle());
-            user.setAvatarUrl(updatedUser.getAvatarUrl());
-            user.setStatus(updatedUser.getStatus());
-            user.setRoles(updatedUser.getRoles());
-            user.setPermissions(updatedUser.getPermissions());
-            
-            updatePermissionsFromRoles(user);
-            
-            return userRepository.save(user);
-        }
-        throw new RuntimeException("User not found with id: " + id);
-    }
-    
-    public void deleteById(Long id) {
-        userRepository.deleteById(id);
-    }
-    
+    // Check if username exists
     public boolean existsByUsername(String username) {
         return userRepository.existsByUsername(username);
     }
     
+    // Check if email exists
     public boolean existsByEmail(String email) {
         return userRepository.existsByEmail(email);
     }
     
-    // Search and Filter
-    public List<User> findByStatus(User.UserStatus status) {
-        return userRepository.findByStatus(status);
+    // Save user (create or update)
+    public User save(User user) {
+        user.setUpdatedAt(LocalDateTime.now());
+        return userRepository.save(user);
     }
     
-    public List<User> findByRole(User.UserRole role) {
-        return userRepository.findByRole(role);
+    // Update user
+    public User update(Long id, User updatedUser) {
+        User existingUser = findById(id).orElseThrow(() -> new RuntimeException("User not found"));
+        
+        existingUser.setUsername(updatedUser.getUsername());
+        existingUser.setEmail(updatedUser.getEmail());
+        existingUser.setFirstName(updatedUser.getFirstName());
+        existingUser.setLastName(updatedUser.getLastName());
+        existingUser.setPhone(updatedUser.getPhone());
+        existingUser.setStatus(updatedUser.getStatus());
+        existingUser.setRoles(updatedUser.getRoles());
+        existingUser.setPermissions(updatedUser.getPermissions());
+        existingUser.setUpdatedAt(LocalDateTime.now());
+        
+        return userRepository.save(existingUser);
     }
     
+    // Delete user by ID
+    public void deleteById(Long id) {
+        User user = findById(id).orElseThrow(() -> new RuntimeException("User not found"));
+        userRepository.delete(user);
+    }
+    
+    // Search users by username or email
     public List<User> searchUsers(String searchTerm) {
-        return userRepository.findBySearchTerm(searchTerm);
+        return userRepository.findAll().stream()
+                .filter(user -> 
+                    user.getUsername().toLowerCase().contains(searchTerm.toLowerCase()) ||
+                    user.getEmail().toLowerCase().contains(searchTerm.toLowerCase()) ||
+                    (user.getFirstName() != null && user.getFirstName().toLowerCase().contains(searchTerm.toLowerCase())) ||
+                    (user.getLastName() != null && user.getLastName().toLowerCase().contains(searchTerm.toLowerCase()))
+                )
+                .toList();
     }
     
-    // Permission Management
-    public User assignRole(Long userId, User.UserRole role) {
-        User user = findById(userId).orElseThrow();
+    // Find users by status
+    public List<User> findByStatus(User.UserStatus status) {
+        return userRepository.findAll().stream()
+                .filter(user -> user.getStatus() == status)
+                .toList();
+    }
+    
+    // Find users by role
+    public List<User> findByRole(User.UserRole role) {
+        return userRepository.findAll().stream()
+                .filter(user -> user.getRoles().contains(role))
+                .toList();
+    }
+    
+    // Assign role to user
+    public User assignRole(Long id, User.UserRole role) {
+        User user = findById(id).orElseThrow(() -> new RuntimeException("User not found"));
         user.getRoles().add(role);
-        updatePermissionsFromRoles(user);
+        user.setUpdatedAt(LocalDateTime.now());
         return userRepository.save(user);
     }
     
-    public User removeRole(Long userId, User.UserRole role) {
-        User user = findById(userId).orElseThrow();
-        user.getRoles().remove(role);
-        updatePermissionsFromRoles(user);
-        return userRepository.save(user);
-    }
-    
-    public User assignPermission(Long userId, User.Permission permission) {
-        User user = findById(userId).orElseThrow();
+    // Assign permission to user
+    public User assignPermission(Long id, User.Permission permission) {
+        User user = findById(id).orElseThrow(() -> new RuntimeException("User not found"));
         user.getPermissions().add(permission);
+        user.setUpdatedAt(LocalDateTime.now());
         return userRepository.save(user);
     }
     
-    public User removePermission(Long userId, User.Permission permission) {
-        User user = findById(userId).orElseThrow();
-        user.getPermissions().remove(permission);
-        return userRepository.save(user);
-    }
-    
-    // Update last login
-    public void updateLastLogin(Long userId) {
-        User user = findById(userId).orElseThrow();
-        user.setLastLoginAt(LocalDateTime.now());
-        userRepository.save(user);
-    }
-    
-    // Statistics
+    // Get total user count
     public long getTotalUsers() {
         return userRepository.count();
     }
     
+    // Get active user count
     public long getActiveUsers() {
-        return userRepository.countByStatus(User.UserStatus.ACTIVE);
+        return userRepository.findAll().stream()
+                .filter(user -> user.getStatus() == User.UserStatus.ACTIVE)
+                .count();
     }
     
-    // Helper method to set permissions based on roles
-    private void updatePermissionsFromRoles(User user) {
-        Set<User.Permission> permissions = user.getPermissions();
+    // Create new user
+    public User createUser(String username, String email, String password, String firstName, String lastName) {
+        User user = new User();
+        user.setUsername(username);
+        user.setEmail(email);
+        user.setPassword(password);
+        user.setFirstName(firstName);
+        user.setLastName(lastName);
+        user.setStatus(User.UserStatus.ACTIVE);
+        user.setCreatedAt(LocalDateTime.now());
+        user.setUpdatedAt(LocalDateTime.now());
         
-        for (User.UserRole role : user.getRoles()) {
-            switch (role) {
-                case ADMIN:
-                    // Admins get all permissions
-                    permissions.addAll(List.of(User.Permission.values()));
-                    break;
-                case MANAGER:
-                    permissions.addAll(List.of(
-                        User.Permission.VIEW_CONNECTIONS, User.Permission.CREATE_CONNECTIONS,
-                        User.Permission.EDIT_CONNECTIONS, User.Permission.DELETE_CONNECTIONS,
-                        User.Permission.VIEW_DATA, User.Permission.EXPORT_DATA,
-                        User.Permission.VIEW_USERS, User.Permission.CREATE_USERS, User.Permission.EDIT_USERS,
-                        User.Permission.VIEW_REPORTS, User.Permission.CREATE_REPORTS,
-                        User.Permission.EDIT_REPORTS, User.Permission.EXPORT_REPORTS
-                    ));
-                    break;
-                case EDITOR:
-                    permissions.addAll(List.of(
-                        User.Permission.VIEW_CONNECTIONS, User.Permission.CREATE_CONNECTIONS,
-                        User.Permission.EDIT_CONNECTIONS,
-                        User.Permission.VIEW_DATA, User.Permission.EXPORT_DATA,
-                        User.Permission.VIEW_REPORTS, User.Permission.CREATE_REPORTS,
-                        User.Permission.EDIT_REPORTS
-                    ));
-                    break;
-                case ANALYST:
-                    permissions.addAll(List.of(
-                        User.Permission.VIEW_CONNECTIONS, User.Permission.VIEW_DATA,
-                        User.Permission.EXPORT_DATA, User.Permission.VIEW_REPORTS,
-                        User.Permission.CREATE_REPORTS, User.Permission.EXPORT_REPORTS,
-                        User.Permission.VIEW_ANALYTICS
-                    ));
-                    break;
-                case TECHNICIAN:
-                    permissions.addAll(List.of(
-                        User.Permission.VIEW_CONNECTIONS, User.Permission.CREATE_CONNECTIONS,
-                        User.Permission.EDIT_CONNECTIONS, User.Permission.VIEW_DATA
-                    ));
-                    break;
-                case VIEWER:
-                    permissions.addAll(List.of(
-                        User.Permission.VIEW_CONNECTIONS, User.Permission.VIEW_DATA,
-                        User.Permission.VIEW_REPORTS
-                    ));
-                    break;
-            }
+        // Set default role
+        Set<User.UserRole> defaultRoles = new HashSet<>();
+        defaultRoles.add(User.UserRole.VIEWER);
+        user.setRoles(defaultRoles);
+        
+        // Set default permissions
+        Set<User.Permission> defaultPermissions = new HashSet<>();
+        defaultPermissions.add(User.Permission.READ);
+        user.setPermissions(defaultPermissions);
+        
+        return userRepository.save(user);
+    }
+    
+    // Update user
+    public User updateUser(Long id, String username, String email, String firstName, String lastName, String phone) {
+        User user = findById(id).orElseThrow(() -> new RuntimeException("User not found"));
+        
+        user.setUsername(username);
+        user.setEmail(email);
+        user.setFirstName(firstName);
+        user.setLastName(lastName);
+        user.setPhone(phone);
+        user.setUpdatedAt(LocalDateTime.now());
+        
+        return userRepository.save(user);
+    }
+    
+    // Update user status
+    public User updateUserStatus(Long id, User.UserStatus status) {
+        User user = findById(id).orElseThrow(() -> new RuntimeException("User not found"));
+        user.setStatus(status);
+        user.setUpdatedAt(LocalDateTime.now());
+        return userRepository.save(user);
+    }
+    
+    // Add role to user
+    public User addRole(Long id, User.UserRole role) {
+        User user = findById(id).orElseThrow(() -> new RuntimeException("User not found"));
+        user.getRoles().add(role);
+        user.setUpdatedAt(LocalDateTime.now());
+        return userRepository.save(user);
+    }
+    
+    // Remove role from user
+    public User removeRole(Long id, User.UserRole role) {
+        User user = findById(id).orElseThrow(() -> new RuntimeException("User not found"));
+        user.getRoles().remove(role);
+        user.setUpdatedAt(LocalDateTime.now());
+        return userRepository.save(user);
+    }
+    
+    // Add permission to user
+    public User addPermission(Long id, User.Permission permission) {
+        User user = findById(id).orElseThrow(() -> new RuntimeException("User not found"));
+        user.getPermissions().add(permission);
+        user.setUpdatedAt(LocalDateTime.now());
+        return userRepository.save(user);
+    }
+    
+    // Remove permission from user
+    public User removePermission(Long id, User.Permission permission) {
+        User user = findById(id).orElseThrow(() -> new RuntimeException("User not found"));
+        user.getPermissions().remove(permission);
+        user.setUpdatedAt(LocalDateTime.now());
+        return userRepository.save(user);
+    }
+    
+    // Check if user has role
+    public boolean hasRole(Long id, User.UserRole role) {
+        User user = findById(id).orElseThrow(() -> new RuntimeException("User not found"));
+        return user.getRoles().contains(role);
+    }
+    
+    // Check if user has permission
+    public boolean hasPermission(Long id, User.Permission permission) {
+        User user = findById(id).orElseThrow(() -> new RuntimeException("User not found"));
+        return user.getPermissions().contains(permission);
+    }
+    
+    // Delete user
+    public void deleteUser(Long id) {
+        User user = findById(id).orElseThrow(() -> new RuntimeException("User not found"));
+        userRepository.delete(user);
+    }
+    
+    // Find users by role
+    public List<User> findUsersByRole(User.UserRole role) {
+        return userRepository.findAll().stream()
+                .filter(user -> user.getRoles().contains(role))
+                .toList();
+    }
+    
+    // Find users by status
+    public List<User> findUsersByStatus(User.UserStatus status) {
+        return userRepository.findAll().stream()
+                .filter(user -> user.getStatus() == status)
+                .toList();
+    }
+    
+    // Get user count
+    public long getUserCount() {
+        return userRepository.count();
+    }
+    
+    // Get active user count
+    public long getActiveUserCount() {
+        return userRepository.findAll().stream()
+                .filter(user -> user.getStatus() == User.UserStatus.ACTIVE)
+                .count();
+    }
+    
+    // Set default permissions based on role
+    public User assignDefaultPermissionsByRole(Long id, User.UserRole role) {
+        User user = findById(id).orElseThrow(() -> new RuntimeException("User not found"));
+        
+        Set<User.Permission> permissions = new HashSet<>();
+        
+        switch (role) {
+            case ADMIN:
+                permissions.add(User.Permission.READ);
+                permissions.add(User.Permission.WRITE);
+                permissions.add(User.Permission.DELETE);
+                permissions.add(User.Permission.ADMIN);
+                permissions.add(User.Permission.MANAGE_USERS);
+                permissions.add(User.Permission.MANAGE_STORAGE);
+                permissions.add(User.Permission.MANAGE_CONNECTIONS);
+                break;
+                
+            case MANAGER:
+                permissions.add(User.Permission.READ);
+                permissions.add(User.Permission.WRITE);
+                permissions.add(User.Permission.MANAGE_USERS);
+                permissions.add(User.Permission.MANAGE_STORAGE);
+                permissions.add(User.Permission.MANAGE_CONNECTIONS);
+                break;
+                
+            case EDITOR:
+                permissions.add(User.Permission.READ);
+                permissions.add(User.Permission.WRITE);
+                permissions.add(User.Permission.MANAGE_CONNECTIONS);
+                break;
+                
+            case ANALYST:
+                permissions.add(User.Permission.READ);
+                permissions.add(User.Permission.WRITE);
+                break;
+                
+            case VIEWER:
+            default:
+                permissions.add(User.Permission.READ);
+                break;
         }
+        
+        user.setPermissions(permissions);
+        user.getRoles().add(role);
+        user.setUpdatedAt(LocalDateTime.now());
+        
+        return userRepository.save(user);
+    }
+    
+    // Change user password
+    public User changePassword(Long id, String newPassword) {
+        User user = findById(id).orElseThrow(() -> new RuntimeException("User not found"));
+        user.setPassword(newPassword);
+        user.setUpdatedAt(LocalDateTime.now());
+        return userRepository.save(user);
+    }
+    
+    // Get user profile summary
+    public UserProfileSummary getUserProfile(Long id) {
+        User user = findById(id).orElseThrow(() -> new RuntimeException("User not found"));
+        
+        UserProfileSummary summary = new UserProfileSummary();
+        summary.setId(user.getId());
+        summary.setUsername(user.getUsername());
+        summary.setEmail(user.getEmail());
+        summary.setFirstName(user.getFirstName());
+        summary.setLastName(user.getLastName());
+        summary.setPhone(user.getPhone());
+        summary.setStatus(user.getStatus().toString());
+        summary.setRoles(user.getRoles().stream().map(Enum::toString).toList());
+        summary.setPermissions(user.getPermissions().stream().map(Enum::toString).toList());
+        summary.setCreatedAt(user.getCreatedAt());
+        summary.setUpdatedAt(user.getUpdatedAt());
+        
+        return summary;
+    }
+    
+    // Inner class for user profile summary
+    public static class UserProfileSummary {
+        private Long id;
+        private String username;
+        private String email;
+        private String firstName;
+        private String lastName;
+        private String phone;
+        private String status;
+        private List<String> roles;
+        private List<String> permissions;
+        private LocalDateTime createdAt;
+        private LocalDateTime updatedAt;
+        
+        // Getters and setters
+        public Long getId() { return id; }
+        public void setId(Long id) { this.id = id; }
+        
+        public String getUsername() { return username; }
+        public void setUsername(String username) { this.username = username; }
+        
+        public String getEmail() { return email; }
+        public void setEmail(String email) { this.email = email; }
+        
+        public String getFirstName() { return firstName; }
+        public void setFirstName(String firstName) { this.firstName = firstName; }
+        
+        public String getLastName() { return lastName; }
+        public void setLastName(String lastName) { this.lastName = lastName; }
+        
+        public String getPhone() { return phone; }
+        public void setPhone(String phone) { this.phone = phone; }
+        
+        public String getStatus() { return status; }
+        public void setStatus(String status) { this.status = status; }
+        
+        public List<String> getRoles() { return roles; }
+        public void setRoles(List<String> roles) { this.roles = roles; }
+        
+        public List<String> getPermissions() { return permissions; }
+        public void setPermissions(List<String> permissions) { this.permissions = permissions; }
+        
+        public LocalDateTime getCreatedAt() { return createdAt; }
+        public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+        
+        public LocalDateTime getUpdatedAt() { return updatedAt; }
+        public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
     }
 }
