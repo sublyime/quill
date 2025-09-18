@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -8,87 +8,43 @@ import { toast } from '@/hooks/use-toast';
 import { Plus, Settings, Trash2, TestTube, CheckCircle, XCircle, Clock } from 'lucide-react';
 import Link from 'next/link';
 import { STORAGE_CONFIGS } from './storage-types';
-
-interface StorageConfig {
-  id: number;
-  name: string;
-  storageType: string;
-  configuration: any;
-  status: 'ACTIVE' | 'INACTIVE' | 'ERROR' | 'TESTING';
-  isDefault: boolean;
-  isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
-  lastTestedAt?: string;
-  lastTestResult?: string;
-}
+import {
+  fetchStorageConfigs as apiFetchStorageConfigs,
+  testConnection as apiTestConnection,
+  deleteStorage as apiDeleteStorage,
+  setAsDefault as apiSetAsDefault,
+} from '@/lib/storage-api';
+import type { StorageConfig } from './storage-types';
 
 export default function StoragePage() {
   const [storageConfigs, setStorageConfigs] = useState<StorageConfig[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [testingIds, setTestingIds] = useState<Set<number>>(new Set());
 
-  useEffect(() => {
-    fetchStorageConfigs();
-  }, []);
-
-  const fetchStorageConfigs = async () => {
+  const fetchStorageConfigs = useCallback(async () => {
+    setIsLoading(true);
     try {
-      const response = await fetch('http://localhost:8080/api/storage');
-      if (response.ok) {
-        const data = await response.json();
-        setStorageConfigs(data);
-      } else {
-        console.error('Failed to fetch storage configurations');
-        toast({
-          title: 'Error',
-          description: 'Failed to load storage configurations. Make sure the backend server is running.',
-          variant: 'destructive',
-        });
-      }
+      const data = await apiFetchStorageConfigs();
+      setStorageConfigs(data);
     } catch (error) {
-      console.error('Error fetching storage configurations:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to connect to the backend server.',
-        variant: 'destructive',
-      });
+      toast({ title: 'Error', description: 'Failed to load storage configurations.', variant: 'destructive' });
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchStorageConfigs();
+  }, [fetchStorageConfigs]);
 
   const testConnection = async (id: number) => {
     setTestingIds(prev => new Set(prev).add(id));
-    
     try {
-      const response = await fetch(`http://localhost:8080/api/storage/${id}/test`, {
-        method: 'POST'
-      });
-      
-      if (response.ok) {
-        const updatedConfig = await response.json();
-        setStorageConfigs(prev => 
-          prev.map(config => config.id === id ? updatedConfig : config)
-        );
-        
-        toast({
-          title: 'Connection Test',
-          description: updatedConfig.lastTestResult || 'Connection test completed',
-        });
-      } else {
-        toast({
-          title: 'Test Failed',
-          description: 'Failed to test storage connection',
-          variant: 'destructive',
-        });
-      }
+      const updatedConfig = await apiTestConnection(id);
+      setStorageConfigs(prev => prev.map(config => config.id === id ? updatedConfig : config));
+      toast({ title: 'Connection Test', description: updatedConfig.lastTestResult || 'Connection test completed' });
     } catch (error) {
-      toast({
-        title: 'Test Failed',
-        description: 'Failed to test storage connection',
-        variant: 'destructive',
-      });
+      toast({ title: 'Test Failed', description: 'Failed to test storage connection', variant: 'destructive' });
     } finally {
       setTestingIds(prev => {
         const newSet = new Set(prev);
@@ -99,74 +55,25 @@ export default function StoragePage() {
   };
 
   const deleteStorage = async (id: number, name: string) => {
-    if (!confirm(`Are you sure you want to delete "${name}"? This action cannot be undone.`)) {
-      return;
-    }
-
+    if (!confirm(`Are you sure you want to delete "${name}"?`)) return;
     try {
-      const response = await fetch(`http://localhost:8080/api/storage/${id}`, {
-        method: 'DELETE'
-      });
-
-      if (response.ok) {
-        setStorageConfigs(prev => prev.filter(config => config.id !== id));
-        toast({
-          title: 'Storage Deleted',
-          description: `"${name}" has been successfully deleted.`,
-        });
-      } else {
-        toast({
-          title: 'Delete Failed',
-          description: 'Failed to delete storage configuration',
-          variant: 'destructive',
-        });
-      }
+      await apiDeleteStorage(id);
+      setStorageConfigs(prev => prev.filter(config => config.id !== id));
+      toast({ title: 'Storage Deleted', description: `"${name}" has been deleted.` });
     } catch (error) {
-      toast({
-        title: 'Delete Failed',
-        description: 'Failed to delete storage configuration',
-        variant: 'destructive',
-      });
+      toast({ title: 'Delete Failed', description: 'Failed to delete storage configuration', variant: 'destructive' });
     }
   };
 
   const setAsDefault = async (id: number, name: string) => {
     try {
-      const response = await fetch(`http://localhost:8080/api/storage/${id}/set-default`, {
-        method: 'POST'
-      });
-
-      if (response.ok) {
-        const updatedConfig = await response.json();
-        
-        // Update all configs to remove default, then set the new one
-        setStorageConfigs(prev => 
-          prev.map(config => ({
-            ...config,
-            isDefault: config.id === id
-          }))
-        );
-        
-        toast({
-          title: 'Default Set',
-          description: `"${name}" is now the default storage configuration.`,
-        });
-      } else {
-        toast({
-          title: 'Update Failed',
-          description: 'Failed to set default storage configuration',
-          variant: 'destructive',
-        });
-      }
+      await apiSetAsDefault(id);
+      setStorageConfigs(prev => prev.map(config => ({ ...config, isDefault: config.id === id })));
+      toast({ title: 'Default Set', description: `"${name}" is now the default.` });
     } catch (error) {
-      toast({
-        title: 'Update Failed',
-        description: 'Failed to set default storage configuration',
-        variant: 'destructive',
-      });
+      toast({ title: 'Update Failed', description: 'Failed to set default storage', variant: 'destructive' });
     }
   };
-
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'ACTIVE':
@@ -192,7 +99,7 @@ export default function StoragePage() {
         return 'bg-gray-100 text-gray-800';
     }
   };
-
+  // Render logic remains the same
   if (isLoading) {
     return (
       <div className="container mx-auto p-6">

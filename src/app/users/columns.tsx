@@ -13,6 +13,8 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
+import { deleteUser } from '@/lib/user-api';
+import { toast } from '@/hooks/use-toast';
 
 export type User = {
   id: string;
@@ -22,14 +24,12 @@ export type User = {
   status: 'active' | 'inactive';
 };
 
-// Add this interface to pass functions to columns
 interface ColumnProps {
-  onEdit?: (user: User) => void;
-  onDelete?: (user: User) => void;
+  onEdit: (user: User) => void;
+  onDelete: (userId: string) => void;
 }
 
-// Update columns to accept callback functions
-export const createColumns = (props: ColumnProps = {}): ColumnDef<User>[] => [
+export const createColumns = (props: ColumnProps): ColumnDef<User>[] => [
   {
     id: 'select',
     header: ({ table }) => (
@@ -51,17 +51,15 @@ export const createColumns = (props: ColumnProps = {}): ColumnDef<User>[] => [
   },
   {
     accessorKey: 'name',
-    header: ({ column }) => {
-      return (
-        <Button
-          variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-        >
-          Name
-          <ArrowUpDown className="ml-2 h-4 w-4" />
-        </Button>
-      );
-    },
+    header: ({ column }) => (
+      <Button
+        variant="ghost"
+        onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+      >
+        Name
+        <ArrowUpDown className="ml-2 h-4 w-4" />
+      </Button>
+    ),
   },
   {
     accessorKey: 'email',
@@ -90,43 +88,14 @@ export const createColumns = (props: ColumnProps = {}): ColumnDef<User>[] => [
       const user = row.original;
 
       const handleDelete = async () => {
-        if (!confirm(`Are you sure you want to delete ${user.name}?`)) {
-          return;
-        }
-
+        if (!confirm(`Are you sure you want to delete ${user.name}?`)) return;
         try {
-          // Call backend delete API
-          const response = await fetch(`http://localhost:8080/api/users/${user.id}`, {
-            method: 'DELETE',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-          });
-
-          if (!response.ok) {
-            throw new Error(`Failed to delete user: ${response.status}`);
-          }
-
-          console.log(`Successfully deleted user: ${user.name}`);
-          
-          // Call the onDelete callback if provided
-          if (props.onDelete) {
-            props.onDelete(user);
-          }
-
-          // Refresh the page to update the user list
-          window.location.reload();
+          await deleteUser(user.id);
+          props.onDelete(user.id);
+          toast({ title: 'Success', description: `User ${user.name} deleted.` });
         } catch (error) {
-          console.error('Error deleting user:', error);
-          alert('Failed to delete user. Please try again.');
+          toast({ title: 'Error', description: 'Failed to delete user.', variant: 'destructive' });
         }
-      };
-
-      const handleEdit = () => {
-        if (props.onEdit) {
-          props.onEdit(user);
-        }
-        console.log('Edit user:', user);
       };
 
       return (
@@ -139,19 +108,11 @@ export const createColumns = (props: ColumnProps = {}): ColumnDef<User>[] => [
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>Actions</DropdownMenuLabel>
-            <DropdownMenuItem
-              onClick={() => navigator.clipboard.writeText(user.id)}
-            >
-              Copy user ID
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={handleEdit}>
+            <DropdownMenuItem onClick={() => props.onEdit(user)}>
               Edit user
             </DropdownMenuItem>
-            <DropdownMenuItem 
-              onClick={handleDelete}
-              className="text-red-600 focus:text-red-600"
-            >
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={handleDelete} className="text-red-600 focus:text-red-600">
               Delete user
             </DropdownMenuItem>
           </DropdownMenuContent>

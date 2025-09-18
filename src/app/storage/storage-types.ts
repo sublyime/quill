@@ -19,7 +19,23 @@ export interface StorageConfigField {
   defaultValue?: string | number;
 }
 
+// This represents a configured storage instance.
 export interface StorageConfig {
+  id: number;
+  name: string;
+  storageType: StorageType;
+  configuration: any;
+  status: 'ACTIVE' | 'INACTIVE' | 'ERROR' | 'TESTING';
+  isDefault: boolean;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  lastTestedAt?: string;
+  lastTestResult?: string;
+}
+
+// This describes the schema for a type of storage provider.
+export interface StorageTypeSchema {
   type: StorageType;
   name: string;
   icon: string;
@@ -27,7 +43,7 @@ export interface StorageConfig {
   fields: StorageConfigField[];
 }
 
-export const STORAGE_CONFIGS: Record<StorageType, StorageConfig> = {
+export const STORAGE_CONFIGS: Record<StorageType, StorageTypeSchema> = {
   POSTGRESQL: {
     type: 'POSTGRESQL',
     name: 'PostgreSQL',

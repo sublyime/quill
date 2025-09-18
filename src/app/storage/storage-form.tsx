@@ -27,15 +27,16 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
-import { STORAGE_CONFIGS, StorageType, StorageConfigField } from './storage-types';
+import { STORAGE_CONFIGS, StorageType, StorageConfigField, StorageTypeSchema } from './storage-types';
 import { Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { createStorageConfig } from '@/lib/storage-api';
 
 // Form schema with proper typing
 const formSchema = z.object({
   storageType: z.string().min(1, 'Please select a storage type.'),
   name: z.string().min(1, 'Storage name is required'),
-  config: z.record(z.union([z.string(), z.number()])).optional(),
+  configuration: z.record(z.union([z.string(), z.number()])).optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -50,54 +51,31 @@ export function StorageForm() {
     defaultValues: {
       storageType: '',
       name: '',
-      config: {}
+      configuration: {}
     }
   });
 
-  const currentFields = selectedType ? STORAGE_CONFIGS[selectedType]?.fields || [] : [];
+  const currentFields: StorageConfigField[] = selectedType ? STORAGE_CONFIGS[selectedType]?.fields || [] : [];
 
   async function onSubmit(values: FormValues) {
     setIsSubmitting(true);
-    
     try {
-      console.log('Submitting storage configuration:', values);
-      
-      // Call the backend API
-      const response = await fetch('http://localhost:8080/api/storage', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name: values.name,
-          storageType: values.storageType,
-          configuration: values.config || {}
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const result = await response.json();
-      console.log('Storage configuration saved:', result);
-      
+        await createStorageConfig({
+            name: values.name,
+            storageType: values.storageType as StorageType,
+            configuration: values.configuration || {},
+        });
       toast({
         title: 'Configuration Saved',
         description: `Your ${STORAGE_CONFIGS[selectedType!]?.name} configuration "${values.name}" has been successfully saved.`,
       });
-      
       form.reset();
       setSelectedType(null);
-      
-      // Redirect to storage list
       router.push('/storage');
-      
     } catch (error) {
-      console.error('Error saving storage configuration:', error);
       toast({
         title: 'Error',
-        description: 'Failed to save storage configuration. Please make sure the backend server is running and try again.',
+        description: 'Failed to save storage configuration. Please try again.',
         variant: 'destructive',
       });
     } finally {
@@ -109,12 +87,10 @@ export function StorageForm() {
     const storageType = value as StorageType;
     setSelectedType(storageType);
     form.setValue('storageType', value);
-    
-    // Reset config when changing storage type
-    form.setValue('config', {});
+    form.setValue('configuration', {});
   };
 
-  const storageOptions = Object.values(STORAGE_CONFIGS);
+  const storageOptions: StorageTypeSchema[] = Object.values(STORAGE_CONFIGS);
 
   return (
     <div className="max-w-4xl mx-auto p-6">
@@ -209,7 +185,7 @@ export function StorageForm() {
                       <FormField
                         key={configField.name}
                         control={form.control}
-                        name={`config.${configField.name}` as FieldPath<FormValues>}
+                        name={`configuration.${configField.name}` as FieldPath<FormValues>}
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel className="flex items-center space-x-1">

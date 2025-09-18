@@ -21,8 +21,9 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { toast } from '@/hooks/use-toast';
-import type { User } from './columns';
-import { useState } from 'react';
+import { User } from './columns';
+import { useState, useEffect } from 'react';
+import { createUser, updateUser } from '@/lib/user-api';
 
 const formSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters.'),
@@ -33,13 +34,14 @@ const formSchema = z.object({
 type UserFormValues = z.infer<typeof formSchema>;
 
 interface UserFormProps {
-  onSubmit?: (user: User) => void;
-  onCancel?: () => void;
-  onUserAdded?: (user: User) => void; // Keep backward compatibility
+  onSubmit: (user: User) => void;
+  onCancel: () => void;
+  currentUser?: User | null;
 }
 
-export function UserForm({ onSubmit, onCancel, onUserAdded }: UserFormProps) {
+export function UserForm({ onSubmit, onCancel, currentUser }: UserFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const isEditMode = !!currentUser;
 
   const form = useForm<UserFormValues>({
     resolver: zodResolver(formSchema),
@@ -50,62 +52,40 @@ export function UserForm({ onSubmit, onCancel, onUserAdded }: UserFormProps) {
     },
   });
 
+  useEffect(() => {
+    if (isEditMode) {
+      form.reset({
+        name: currentUser.name,
+        email: currentUser.email,
+        role: currentUser.role,
+      });
+    }
+  }, [isEditMode, currentUser, form]);
+
   async function handleSubmit(values: UserFormValues) {
     setIsSubmitting(true);
     try {
-      // Use direct backend URL
-      const response = await fetch('http://localhost:8080/api/users', {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json' 
-        },
-        body: JSON.stringify({
-          username: values.name, // Backend expects 'username'
-          email: values.email,
-          firstName: values.name,
-          roles: [values.role.toUpperCase()], // Convert to backend format
-          status: 'ACTIVE',
-          password: 'tempPassword123' // In production, this should be handled properly
-        }),
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Server response:', response.status, errorText);
-        throw new Error(`Failed to create user: ${response.status}`);
+      let resultUser: User;
+      if (isEditMode) {
+        resultUser = await updateUser({ ...currentUser, ...values });
+        toast({
+          title: 'Success',
+          description: `User ${values.name} has been successfully updated.`,
+        });
+      } else {
+        resultUser = await createUser(values);
+        toast({
+          title: 'Success',
+          description: `User ${values.name} has been successfully created.`,
+        });
       }
-
-      const newUser = await response.json();
-      console.log('Created user:', newUser);
-
-      // Transform backend response to frontend format
-      const frontendUser: User = {
-        id: newUser.id.toString(),
-        name: newUser.firstName || newUser.username,
-        email: newUser.email,
-        role: values.role,
-        status: 'active'
-      };
-
-      // Call the appropriate callback
-      if (onSubmit) {
-        onSubmit(frontendUser);
-      } else if (onUserAdded) {
-        onUserAdded(frontendUser);
-      }
-
-      toast({
-        title: 'Success',
-        description: `User ${values.name} has been successfully created.`,
-      });
-
+      onSubmit(resultUser);
       form.reset();
-
     } catch (error: any) {
-      console.error('Error creating user:', error);
+      console.error('Error saving user:', error);
       toast({
         title: 'Error',
-        description: error.message || 'Could not create the new user. Please try again.',
+        description: error.message || 'Could not save the user. Please try again.',
         variant: 'destructive',
       });
     } finally {
@@ -123,17 +103,12 @@ export function UserForm({ onSubmit, onCancel, onUserAdded }: UserFormProps) {
             <FormItem>
               <FormLabel>Full Name</FormLabel>
               <FormControl>
-                <Input 
-                  placeholder="Enter full name" 
-                  {...field}
-                  value={field.value || ''}
-                />
+                <Input placeholder="Enter full name" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
-
         <FormField
           control={form.control}
           name="email"
@@ -141,25 +116,19 @@ export function UserForm({ onSubmit, onCancel, onUserAdded }: UserFormProps) {
             <FormItem>
               <FormLabel>Email Address</FormLabel>
               <FormControl>
-                <Input 
-                  type="email"
-                  placeholder="Enter email address" 
-                  {...field}
-                  value={field.value || ''}
-                />
+                <Input type="email" placeholder="Enter email address" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
-
         <FormField
           control={form.control}
           name="role"
           render={({ field }) => (
             <FormItem>
               <FormLabel>Role</FormLabel>
-              <Select onValueChange={field.onChange} value={field.value || 'Viewer'}>
+              <Select onValueChange={field.onChange} value={field.value}>
                 <FormControl>
                   <SelectTrigger>
                     <SelectValue placeholder="Select a role" />
@@ -175,26 +144,13 @@ export function UserForm({ onSubmit, onCancel, onUserAdded }: UserFormProps) {
             </FormItem>
           )}
         />
-
         <div className="flex gap-4 pt-4">
-          <Button 
-            type="submit" 
-            disabled={isSubmitting}
-            className="flex-1"
-          >
-            {isSubmitting ? 'Creating...' : 'Create User'}
+          <Button type="submit" disabled={isSubmitting} className="flex-1">
+            {isSubmitting ? (isEditMode ? 'Updating...' : 'Creating...') : (isEditMode ? 'Update User' : 'Create User')}
           </Button>
-          
-          {onCancel && (
-            <Button 
-              type="button" 
-              variant="outline" 
-              onClick={onCancel}
-              className="flex-1"
-            >
-              Cancel
-            </Button>
-          )}
+          <Button type="button" variant="outline" onClick={onCancel} className="flex-1">
+            Cancel
+          </Button>
         </div>
       </form>
     </Form>

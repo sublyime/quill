@@ -40,7 +40,6 @@ public class StorageService {
         return storageRepository.save(storage);
     }
     
-    // ADD THIS METHOD - Find default storage configuration
     public Optional<Storage> findDefaultStorage() {
         return storageRepository.findByIsDefaultTrue();
     }
@@ -82,7 +81,6 @@ public class StorageService {
         storageRepository.delete(storage);
     }
     
-    // Additional helper methods
     public boolean existsByName(String name) {
         return storageRepository.existsByName(name);
     }
@@ -103,21 +101,20 @@ public class StorageService {
     }
     
     public Storage createDefaultIfNone() {
-        Optional<Storage> defaultStorage = findDefaultStorage();
-        if (defaultStorage.isEmpty()) {
+        if (storageRepository.count() == 0) {
             // Create a default local file system storage
             Storage storage = new Storage();
             storage.setName("Default Local Storage");
             storage.setStorageType("LOCAL_FILE_SYSTEM");
-            storage.setConfiguration("{\"path\":\"/var/lib/quill/data\",\"maxFileSize\":100}");
+            storage.setConfiguration("{\"path\":\"/var/lib/quill/data\"}");
             storage.setIsDefault(true);
             storage.setIsActive(true);
-            storage.setStatus(Storage.StorageStatus.CONFIGURED);
+            storage.setStatus(Storage.StorageStatus.ACTIVE);
             storage.setCreatedAt(LocalDateTime.now());
             storage.setUpdatedAt(LocalDateTime.now());
             
             return storageRepository.save(storage);
         }
-        return defaultStorage.get();
+        return null;
     }
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { User } from './columns';
 import { DataTable } from './data-table';
 import { Button } from '@/components/ui/button';
@@ -16,109 +16,65 @@ import {
 import { UserForm } from './user-form';
 import { Skeleton } from '@/components/ui/skeleton';
 import { createColumns } from './columns';
+import { getUsers } from '@/lib/user-api';
+import { toast } from '@/hooks/use-toast';
 
 export default function UsersPage() {
   const [users, setUsers] = useState<User[]>([]);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState<User | null>(null);
 
-  const fetchUsers = async () => {
+  const fetchUsers = useCallback(async () => {
+    setIsLoading(true);
     try {
-      const response = await fetch('http://localhost:8080/api/users', {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-      
-      if (!response.ok) {
-        throw new Error(`Failed to fetch users: ${response.status}`);
-      }
-      
-      const data = await response.json();
-      console.log('Fetched users:', data);
-      
-      // Transform backend data to frontend format
-      const transformedUsers: User[] = data.map((user: any) => ({
-        id: user.id.toString(),
-        name: user.firstName || user.username,
-        email: user.email,
-        role: user.roles?.[0] || 'Viewer',
-        status: user.status === 'ACTIVE' ? 'active' : 'inactive'
-      }));
-      
-      setUsers(transformedUsers);
+      const fetchedUsers = await getUsers();
+      setUsers(fetchedUsers);
     } catch (error) {
-      console.error('Error fetching users:', error);
-      setUsers([]);
+      toast({ title: 'Error', description: 'Failed to fetch users.', variant: 'destructive' });
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchUsers();
-  }, []);
+  }, [fetchUsers]);
 
-  const handleAddUser = (newUser: User) => {
-    console.log('Added new user:', newUser);
-    setUsers((prevUsers) => [newUser, ...prevUsers]);
+  const handleUserSaved = (user: User) => {
+    if (editingUser) {
+      setUsers(users.map(u => u.id === user.id ? user : u));
+    } else {
+      setUsers([user, ...users]);
+    }
     setIsDialogOpen(false);
-    // Refresh the list to get the latest data
-    fetchUsers();
+    setEditingUser(null);
   };
 
   const handleEdit = (user: User) => {
-    console.log('Edit user:', user);
-    // TODO: Implement edit functionality
+    setEditingUser(user);
+    setIsDialogOpen(true);
   };
 
-  const handleDelete = (user: User) => {
-    console.log('Deleted user:', user);
-    // Refresh the user list after deletion
-    fetchUsers();
+  const handleDelete = (userId: string) => {
+    setUsers(users.filter(u => u.id !== userId));
   };
 
-  // Create columns with callback functions
-  const columns = createColumns({
-    onEdit: handleEdit,
-    onDelete: handleDelete,
-  });
+  const columns = createColumns({ onEdit: handleEdit, onDelete: handleDelete });
 
   return (
     <div className="container mx-auto py-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">User Management</h1>
-          <p className="text-muted-foreground">
-            Manage all users in the system.
-          </p>
+          <p className="text-muted-foreground">Manage all users in the system.</p>
         </div>
-        
-        {/* Add User Button */}
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="flex items-center gap-2">
-              <PlusCircle className="h-4 w-4" />
-              Add User
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>Add New User</DialogTitle>
-              <DialogDescription>
-                Fill in the details below to add a new user.
-              </DialogDescription>
-            </DialogHeader>
-            <UserForm 
-              onSubmit={handleAddUser}
-              onCancel={() => setIsDialogOpen(false)}
-            />
-          </DialogContent>
-        </Dialog>
+        <Button className="flex items-center gap-2" onClick={() => { setEditingUser(null); setIsDialogOpen(true); }}>
+          <PlusCircle className="h-4 w-4" />
+          Add User
+        </Button>
       </div>
 
-      {/* Users Table */}
       {isLoading ? (
         <div className="space-y-4">
           <Skeleton className="h-10 w-full" />
@@ -132,6 +88,22 @@ export default function UsersPage() {
           filterPlaceholder="Filter by name..."
         />
       )}
+
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>{editingUser ? 'Edit User' : 'Add New User'}</DialogTitle>
+            <DialogDescription>
+              {editingUser ? 'Update the details below.' : 'Fill in the details to add a new user.'}
+            </DialogDescription>
+          </DialogHeader>
+          <UserForm 
+            onSubmit={handleUserSaved}
+            onCancel={() => { setIsDialogOpen(false); setEditingUser(null); }}
+            currentUser={editingUser}
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
