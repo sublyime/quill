@@ -1,4 +1,3 @@
-
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -34,11 +33,14 @@ const formSchema = z.object({
 type UserFormValues = z.infer<typeof formSchema>;
 
 interface UserFormProps {
-    onUserAdded: (user: User) => void;
+  onSubmit?: (user: User) => void;
+  onCancel?: () => void;
+  onUserAdded?: (user: User) => void; // Keep backward compatibility
 }
 
-export function UserForm({ onUserAdded }: UserFormProps) {
+export function UserForm({ onSubmit, onCancel, onUserAdded }: UserFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+
   const form = useForm<UserFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -48,33 +50,62 @@ export function UserForm({ onUserAdded }: UserFormProps) {
     },
   });
 
-  async function onSubmit(values: UserFormValues) {
+  async function handleSubmit(values: UserFormValues) {
     setIsSubmitting(true);
     try {
-      const response = await fetch('/api/users', {
+      // Use direct backend URL
+      const response = await fetch('http://localhost:8080/api/users', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(values),
+        headers: { 
+          'Content-Type': 'application/json' 
+        },
+        body: JSON.stringify({
+          username: values.name, // Backend expects 'username'
+          email: values.email,
+          firstName: values.name,
+          roles: [values.role.toUpperCase()], // Convert to backend format
+          status: 'ACTIVE',
+          password: 'tempPassword123' // In production, this should be handled properly
+        }),
       });
 
       if (!response.ok) {
-        throw new Error('Failed to create user');
+        const errorText = await response.text();
+        console.error('Server response:', response.status, errorText);
+        throw new Error(`Failed to create user: ${response.status}`);
       }
-      
+
       const newUser = await response.json();
-      onUserAdded(newUser);
+      console.log('Created user:', newUser);
+
+      // Transform backend response to frontend format
+      const frontendUser: User = {
+        id: newUser.id.toString(),
+        name: newUser.firstName || newUser.username,
+        email: newUser.email,
+        role: values.role,
+        status: 'active'
+      };
+
+      // Call the appropriate callback
+      if (onSubmit) {
+        onSubmit(frontendUser);
+      } else if (onUserAdded) {
+        onUserAdded(frontendUser);
+      }
 
       toast({
-        title: 'User Created',
+        title: 'Success',
         description: `User ${values.name} has been successfully created.`,
       });
+
       form.reset();
 
-    } catch (error) {
-      console.error(error);
+    } catch (error: any) {
+      console.error('Error creating user:', error);
       toast({
         title: 'Error',
-        description: 'Could not create the new user. Please try again.',
+        description: error.message || 'Could not create the new user. Please try again.',
         variant: 'destructive',
       });
     } finally {
@@ -84,7 +115,7 @@ export function UserForm({ onUserAdded }: UserFormProps) {
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
         <FormField
           control={form.control}
           name="name"
@@ -92,12 +123,17 @@ export function UserForm({ onUserAdded }: UserFormProps) {
             <FormItem>
               <FormLabel>Full Name</FormLabel>
               <FormControl>
-                <Input placeholder="e.g., John Doe" {...field} />
+                <Input 
+                  placeholder="Enter full name" 
+                  {...field}
+                  value={field.value || ''}
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
+
         <FormField
           control={form.control}
           name="email"
@@ -105,19 +141,25 @@ export function UserForm({ onUserAdded }: UserFormProps) {
             <FormItem>
               <FormLabel>Email Address</FormLabel>
               <FormControl>
-                <Input placeholder="e.g., john.doe@example.com" {...field} />
+                <Input 
+                  type="email"
+                  placeholder="Enter email address" 
+                  {...field}
+                  value={field.value || ''}
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
+
         <FormField
           control={form.control}
           name="role"
           render={({ field }) => (
             <FormItem>
               <FormLabel>Role</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
+              <Select onValueChange={field.onChange} value={field.value || 'Viewer'}>
                 <FormControl>
                   <SelectTrigger>
                     <SelectValue placeholder="Select a role" />
@@ -133,10 +175,26 @@ export function UserForm({ onUserAdded }: UserFormProps) {
             </FormItem>
           )}
         />
-        <div className="flex justify-end pt-4">
-           <Button type="submit" disabled={isSubmitting}>
-             {isSubmitting ? 'Creating...' : 'Create User'}
+
+        <div className="flex gap-4 pt-4">
+          <Button 
+            type="submit" 
+            disabled={isSubmitting}
+            className="flex-1"
+          >
+            {isSubmitting ? 'Creating...' : 'Create User'}
+          </Button>
+          
+          {onCancel && (
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={onCancel}
+              className="flex-1"
+            >
+              Cancel
             </Button>
+          )}
         </div>
       </form>
     </Form>

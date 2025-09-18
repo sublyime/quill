@@ -3,7 +3,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '../../components/ui/button';
 import {
   Form,
@@ -40,6 +40,22 @@ export function ConnectionForm({ onAddConnection }: ConnectionFormProps) {
   const [selectedDataSource, setSelectedDataSource] = useState<DataSourceType>('mqtt');
   const [loading, setLoading] = useState(false);
 
+  // Helper function to get default config values
+  const getDefaultConfigValues = (dataSourceType: DataSourceType) => {
+    const config = DATA_SOURCE_CONFIGS[dataSourceType];
+    const defaultValues: Record<string, any> = {};
+    
+    config.fields.forEach(field => {
+      if (field.type === 'number') {
+        defaultValues[field.name] = '';
+      } else {
+        defaultValues[field.name] = '';
+      }
+    });
+    
+    return defaultValues;
+  };
+
   // Create dynamic schema
   const createDynamicSchema = (dataSourceType: DataSourceType) => {
     const config = DATA_SOURCE_CONFIGS[dataSourceType];
@@ -54,6 +70,7 @@ export function ConnectionForm({ onAddConnection }: ConnectionFormProps) {
         if (field.validation?.max !== undefined) {
           numberSchema = numberSchema.max(field.validation.max);
         }
+        // Apply optional ONCE
         configSchemaShape[field.name] = field.required ? numberSchema : numberSchema.optional();
       } else {
         let stringSchema = z.string();
@@ -82,22 +99,40 @@ export function ConnectionForm({ onAddConnection }: ConnectionFormProps) {
     defaultValues: {
       connectionName: '',
       dataSourceType: selectedDataSource,
-      config: {},
+      config: getDefaultConfigValues(selectedDataSource),
     },
   });
 
+  // Reset form when data source changes
   const handleDataSourceChange = (newType: DataSourceType) => {
     setSelectedDataSource(newType);
-    form.setValue('dataSourceType', newType);
-    form.setValue('config', {});
+    form.reset({
+      connectionName: form.getValues('connectionName'),
+      dataSourceType: newType,
+      config: getDefaultConfigValues(newType),
+    });
   };
+
+  // Update form defaults when selectedDataSource changes
+  useEffect(() => {
+    form.reset({
+      connectionName: form.getValues('connectionName'),
+      dataSourceType: selectedDataSource,
+      config: getDefaultConfigValues(selectedDataSource),
+    });
+  }, [selectedDataSource]);
 
   async function onSubmit(data: FormSchema) {
     setLoading(true);
     try {
       // Filter out empty values
       const filteredConfig = Object.fromEntries(
-        Object.entries(data.config).filter(([_, value]) => value !== '' && value !== 0)
+        Object.entries(data.config).filter(([_, value]) => 
+          value !== '' && 
+          value !== null && 
+          value !== undefined && 
+          !(typeof value === 'number' && isNaN(value))
+        )
       );
 
       console.log('Submitting connection:', {
@@ -106,7 +141,7 @@ export function ConnectionForm({ onAddConnection }: ConnectionFormProps) {
         config: filteredConfig,
       });
 
-      // Use direct backend URL instead of proxy
+      // Use direct backend URL
       const response = await fetch('http://localhost:8080/api/connections', {
         method: 'POST',
         headers: { 
@@ -136,7 +171,7 @@ export function ConnectionForm({ onAddConnection }: ConnectionFormProps) {
       form.reset({
         connectionName: '',
         dataSourceType: selectedDataSource,
-        config: {},
+        config: getDefaultConfigValues(selectedDataSource),
       });
 
       onAddConnection(savedConnection);
@@ -178,7 +213,11 @@ export function ConnectionForm({ onAddConnection }: ConnectionFormProps) {
                 <FormItem>
                   <FormLabel>Connection Name</FormLabel>
                   <FormControl>
-                    <Input placeholder="Enter connection name" {...field} />
+                    <Input 
+                      placeholder="Enter connection name" 
+                      {...field}
+                      value={field.value || ''}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -196,7 +235,7 @@ export function ConnectionForm({ onAddConnection }: ConnectionFormProps) {
                       field.onChange(value);
                       handleDataSourceChange(value as DataSourceType);
                     }}
-                    value={field.value}
+                    value={field.value || selectedDataSource}
                   >
                     <FormControl>
                       <SelectTrigger>
@@ -249,7 +288,10 @@ export function ConnectionForm({ onAddConnection }: ConnectionFormProps) {
                           </FormLabel>
                           <FormControl>
                             {field.type === 'select' && field.options ? (
-                              <Select onValueChange={formField.onChange} value={formField.value}>
+                              <Select 
+                                onValueChange={formField.onChange} 
+                                value={formField.value || ''}
+                              >
                                 <SelectTrigger>
                                   <SelectValue placeholder={`Select ${field.label}`} />
                                 </SelectTrigger>
@@ -266,6 +308,7 @@ export function ConnectionForm({ onAddConnection }: ConnectionFormProps) {
                                 type={field.type === 'number' ? 'number' : field.type === 'password' ? 'password' : 'text'}
                                 placeholder={field.placeholder}
                                 {...formField}
+                                value={formField.value || ''}
                               />
                             )}
                           </FormControl>
