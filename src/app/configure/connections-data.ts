@@ -1,8 +1,22 @@
-
-export type Connection = {
+export interface Connection {
   id: string;
   name: string;
-  sourceType: 'mqtt' | 'modbus_tcp' | 'modbus_rtu' | 'tcp' | 'udp' | 'serial' | 'rest' | 'soap' | 'iot';
-  status: 'online' | 'offline' | 'error';
-  lastActivity: string;
-};
+  sourceType: string;
+  config: string; // JSON string
+  status: 'ONLINE' | 'OFFLINE' | 'ERROR' | 'CONNECTING';
+  createdAt: string;
+  lastConnected?: string;
+  lastError?: string;
+}
+
+export interface ParsedConnectionConfig {
+  [key: string]: string | number;
+}
+
+export function parseConnectionConfig(config: string): ParsedConnectionConfig {
+  try {
+    return JSON.parse(config);
+  } catch {
+    return {};
+  }
+}
