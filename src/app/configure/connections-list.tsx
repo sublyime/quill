@@ -1,13 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
-import { Badge } from '../../components/ui/badge';
-import { Button } from '../../components/ui/button';
-import { Trash2, TestTube, Edit } from 'lucide-react';
-import { toast } from '../../hooks/use-toast';
-import { DATA_SOURCE_CONFIGS } from '../../lib/data-sources';
-import { Connection, parseConnectionConfig } from './connections-data';
+import { useState } from 'react';
+import { Connection } from './connections-data';
 
 interface ConnectionsListProps {
   connections: Connection[];
@@ -15,150 +9,128 @@ interface ConnectionsListProps {
 }
 
 export function ConnectionsList({ connections, onConnectionsChange }: ConnectionsListProps) {
-  const [loading, setLoading] = useState<{ [key: string]: boolean }>({});
+  const [testingIds, setTestingIds] = useState<Set<number>>(new Set());
+  const [deletingIds, setDeletingIds] = useState<Set<number>>(new Set());
 
-  const getStatusVariant = (status: Connection['status']) => {
-    switch (status) {
-      case 'ONLINE': return 'success';
-      case 'OFFLINE': return 'secondary';
-      case 'ERROR': return 'destructive';
-      case 'CONNECTING': return 'warning';
-      default: return 'secondary';
-    }
-  };
-
-  const testConnection = async (id: string) => {
-    setLoading(prev => ({ ...prev, [id]: true }));
-    try {
-      const response = await fetch(`/api/connections/${id}/test`, {
-        method: 'POST',
-      });
-      
-      if (response.ok) {
-        const message = await response.text();
-        toast({ title: 'Connection Test', description: message });
-        onConnectionsChange(); // Refresh the list to show updated status
-      } else {
-        const error = await response.text();
-        toast({ title: 'Connection Test Failed', description: error, variant: 'destructive' });
-      }
-    } catch (error) {
-      toast({ 
-        title: 'Error', 
-        description: 'Failed to test connection', 
-        variant: 'destructive' 
-      });
-    } finally {
-      setLoading(prev => ({ ...prev, [id]: false }));
-    }
-  };
-
-  const deleteConnection = async (id: string, name: string) => {
-    if (!confirm(`Are you sure you want to delete "${name}"?`)) return;
+  const testConnection = async (id: number) => {
+    setTestingIds(prev => new Set([...prev, id]));
     
     try {
-      const response = await fetch(`/api/connections/${id}`, {
-        method: 'DELETE',
+      // Use direct backend URL with NUMERIC ID
+      const response = await fetch(`http://localhost:8080/api/connections/${id}/test`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
       });
       
-      if (response.ok) {
-        toast({ title: 'Success', description: `Connection "${name}" deleted.` });
-        onConnectionsChange();
-      } else {
-        throw new Error('Failed to delete connection');
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
+      
+      const result = await response.text();
+      console.log('Test result:', result);
+      
+      // Refresh connections to show updated status
+      onConnectionsChange();
     } catch (error) {
-      toast({ 
-        title: 'Error', 
-        description: 'Failed to delete connection', 
-        variant: 'destructive' 
+      console.error('Error testing connection:', error);
+      alert('Failed to test connection');
+    } finally {
+      setTestingIds(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(id);
+        return newSet;
+      });
+    }
+  };
+
+  const deleteConnection = async (id: number) => {
+    if (!confirm('Are you sure you want to delete this connection?')) {
+      return;
+    }
+    
+    setDeletingIds(prev => new Set([...prev, id]));
+    
+    try {
+      // Use direct backend URL with NUMERIC ID
+      const response = await fetch(`http://localhost:8080/api/connections/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      console.log('Connection deleted successfully');
+      
+      // Refresh connections
+      onConnectionsChange();
+    } catch (error) {
+      console.error('Error deleting connection:', error);
+      alert('Failed to delete connection');
+    } finally {
+      setDeletingIds(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(id);
+        return newSet;
       });
     }
   };
 
   if (connections.length === 0) {
     return (
-      <Card>
-        <CardContent className="flex flex-col items-center justify-center py-12">
-          <p className="text-muted-foreground mb-4">No connections configured yet.</p>
-          <p className="text-sm text-muted-foreground">Add your first connection to get started.</p>
-        </CardContent>
-      </Card>
+      <div className="text-center py-8 text-gray-500">
+        No connections configured yet. Add your first connection above.
+      </div>
     );
   }
 
   return (
     <div className="space-y-4">
-      {connections.map((connection) => {
-        const config = parseConnectionConfig(connection.config);
-        const sourceConfig = DATA_SOURCE_CONFIGS[connection.sourceType as keyof typeof DATA_SOURCE_CONFIGS];
-        const IconComponent = sourceConfig?.icon;
-
-        return (
-          <Card key={connection.id}>
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  {IconComponent && <IconComponent className="h-5 w-5" />}
-                  <div>
-                    <CardTitle className="text-lg">{connection.name}</CardTitle>
-                    <p className="text-sm text-muted-foreground">
-                      {sourceConfig?.label || connection.sourceType}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Badge variant={getStatusVariant(connection.status) as any}>
-                    {connection.status}
-                  </Badge>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => testConnection(connection.id)}
-                    disabled={loading[connection.id]}
-                  >
-                    <TestTube className="h-4 w-4 mr-1" />
-                    {loading[connection.id] ? 'Testing...' : 'Test'}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => deleteConnection(connection.id, connection.name)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                {Object.entries(config).map(([key, value]) => (
-                  <div key={key}>
-                    <span className="font-medium capitalize">
-                      {key.replace(/([A-Z])/g, ' $1').toLowerCase()}:
-                    </span>
-                    <span className="ml-2 text-muted-foreground">
-                      {key.toLowerCase().includes('password') || key.toLowerCase().includes('key') 
-                        ? '••••••••' 
-                        : String(value)}
-                    </span>
-                  </div>
-                ))}
-              </div>
-              {connection.lastConnected && (
-                <p className="text-xs text-muted-foreground mt-2">
-                  Last connected: {new Date(connection.lastConnected).toLocaleString()}
+      {connections.map((connection) => (
+        <div key={connection.id} className="border rounded-lg p-4 bg-card">
+          <div className="flex items-start justify-between">
+            <div className="flex-1">
+              <h3 className="font-semibold text-lg">{connection.name}</h3>
+              <p className="text-sm text-muted-foreground capitalize">
+                {connection.sourceType} • {connection.status}
+              </p>
+              {connection.config && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  {connection.config.length > 100 
+                    ? `${connection.config.substring(0, 100)}...` 
+                    : connection.config}
                 </p>
               )}
-              {connection.lastError && (
-                <p className="text-xs text-red-500 mt-1">
-                  Error: {connection.lastError}
-                </p>
-              )}
-            </CardContent>
-          </Card>
-        );
-      })}
+              <p className="text-xs text-muted-foreground">
+                Created: {new Date(connection.createdAt).toLocaleString()}
+              </p>
+            </div>
+            
+            <div className="flex gap-2 ml-4">
+              <button
+                onClick={() => testConnection(connection.id)}
+                disabled={testingIds.has(connection.id)}
+                className="px-3 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50"
+              >
+                {testingIds.has(connection.id) ? 'Testing...' : 'Test'}
+              </button>
+              
+              <button
+                onClick={() => deleteConnection(connection.id)}
+                disabled={deletingIds.has(connection.id)}
+                className="px-3 py-1 text-sm bg-red-500 text-white rounded hover:bg-red-600 disabled:opacity-50"
+              >
+                {deletingIds.has(connection.id) ? 'Deleting...' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      ))}
     </div>
   );
 }

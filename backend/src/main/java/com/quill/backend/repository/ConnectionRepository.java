@@ -6,5 +6,5 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface ConnectionRepository extends JpaRepository<Connection, Long> {
-    // Additional custom queries can be added here if needed
+    // Basic CRUD is auto-provided
 }

@@ -1,5 +1,5 @@
 export interface Connection {
-  id: string;
+  id: number; // Changed from string to number to match backend Long
   name: string;
   sourceType: string;
   config: string; // JSON string
