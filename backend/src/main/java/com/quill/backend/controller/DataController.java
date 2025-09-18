@@ -4,15 +4,17 @@ import com.quill.backend.model.DataRecord;
 import com.quill.backend.service.DataManagementService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
+import java.util.HashMap;
 
 @RestController
 @RequestMapping("/api/data")
-@CrossOrigin(origins = {"http://localhost:9002", "http://localhost:3000"})
+@CrossOrigin(origins = "*")
 public class DataController {
     
     @Autowired
@@ -20,100 +22,79 @@ public class DataController {
     
     // Store single data record
     @PostMapping("/store")
-    public ResponseEntity<DataRecord> storeData(@RequestBody DataStoreRequest request) {
+    public ResponseEntity<Map<String, Object>> storeData(@RequestBody Map<String, Object> dataPayload) {
         try {
-            System.out.println("=== POST /api/data/store called ===");
-            DataRecord record = dataManagementService.storeData(
-                request.getSourceId(),
-                request.getDataType(),
-                request.getPayload(),
-                request.getMetadata()
-            );
-            System.out.println("Stored data record with ID: " + record.getId());
-            return ResponseEntity.ok(record);
+            // Fixed: Just pass the data payload directly
+            Map<String, Object> result = dataManagementService.storeData(dataPayload);
+            return ResponseEntity.ok(result);
         } catch (Exception e) {
-            System.err.println("Error storing data: " + e.getMessage());
-            e.printStackTrace();
-            return ResponseEntity.badRequest().build();
+            Map<String, Object> errorResult = new HashMap<>();
+            errorResult.put("success", false);
+            errorResult.put("error", e.getMessage());
+            return ResponseEntity.badRequest().body(errorResult);
         }
     }
     
     // Store batch of data records
-    @PostMapping("/store/batch")
-    public ResponseEntity<List<DataRecord>> storeDataBatch(@RequestBody List<DataRecord> records) {
+    @PostMapping("/store-batch")
+    public ResponseEntity<Map<String, Object>> storeDataBatch(@RequestBody List<DataRecord> dataRecords) {
         try {
-            System.out.println("=== POST /api/data/store/batch called ===");
-            System.out.println("Storing " + records.size() + " records");
-            List<DataRecord> storedRecords = dataManagementService.storeDataBatch(records);
-            System.out.println("Successfully stored " + storedRecords.size() + " records");
-            return ResponseEntity.ok(storedRecords);
+            // Fixed: storeDataBatch returns Map<String, Object>, not List<DataRecord>
+            Map<String, Object> result = dataManagementService.storeDataBatch(dataRecords);
+            return ResponseEntity.ok(result);
         } catch (Exception e) {
-            System.err.println("Error storing data batch: " + e.getMessage());
-            e.printStackTrace();
+            Map<String, Object> errorResult = new HashMap<>();
+            errorResult.put("success", false);
+            errorResult.put("error", e.getMessage());
+            return ResponseEntity.badRequest().body(errorResult);
+        }
+    }
+    
+    // Get data by source ID
+    @GetMapping("/source/{sourceId}")
+    public ResponseEntity<List<DataRecord>> getDataBySource(@PathVariable String sourceId) {
+        try {
+            List<DataRecord> data = dataManagementService.getDataBySource(sourceId);
+            return ResponseEntity.ok(data);
+        } catch (Exception e) {
             return ResponseEntity.badRequest().build();
         }
     }
     
-    // Get data by source
-    @GetMapping("/source/{sourceId}")
-    public ResponseEntity<List<DataRecord>> getDataBySource(@PathVariable String sourceId) {
-        try {
-            System.out.println("=== GET /api/data/source/" + sourceId + " called ===");
-            List<DataRecord> data = dataManagementService.getDataBySource(sourceId);
-            System.out.println("Retrieved " + data.size() + " records for source: " + sourceId);
-            return ResponseEntity.ok(data);
-        } catch (Exception e) {
-            System.err.println("Error retrieving data by source: " + e.getMessage());
-            e.printStackTrace();
-            return ResponseEntity.internalServerError().build();
-        }
-    }
-    
-    // Get data by type
+    // Get data by data type
     @GetMapping("/type/{dataType}")
     public ResponseEntity<List<DataRecord>> getDataByType(@PathVariable String dataType) {
         try {
-            System.out.println("=== GET /api/data/type/" + dataType + " called ===");
             List<DataRecord> data = dataManagementService.getDataByType(dataType);
-            System.out.println("Retrieved " + data.size() + " records for type: " + dataType);
             return ResponseEntity.ok(data);
         } catch (Exception e) {
-            System.err.println("Error retrieving data by type: " + e.getMessage());
-            e.printStackTrace();
-            return ResponseEntity.internalServerError().build();
+            return ResponseEntity.badRequest().build();
         }
     }
     
-    // Get recent data (last N hours)
+    // Get recent data records
     @GetMapping("/recent")
-    public ResponseEntity<List<DataRecord>> getRecentData(@RequestParam(defaultValue = "24") int hours) {
+    public ResponseEntity<List<DataRecord>> getRecentData(@RequestParam(defaultValue = "100") int limit) {
         try {
-            System.out.println("=== GET /api/data/recent?hours=" + hours + " called ===");
-            List<DataRecord> data = dataManagementService.getRecentData(hours);
-            System.out.println("Retrieved " + data.size() + " recent records");
+            List<DataRecord> data = dataManagementService.getRecentData(limit);
             return ResponseEntity.ok(data);
         } catch (Exception e) {
-            System.err.println("Error retrieving recent data: " + e.getMessage());
-            e.printStackTrace();
-            return ResponseEntity.internalServerError().build();
+            return ResponseEntity.badRequest().build();
         }
     }
     
     // Get data by time range
     @GetMapping("/range")
-    public ResponseEntity<List<DataRecord>> getDataByRange(
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime start,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime end) {
+    public ResponseEntity<List<DataRecord>> getDataByTimeRange(
+            @RequestParam String startTime,
+            @RequestParam String endTime) {
         try {
-            System.out.println("=== GET /api/data/range called ===");
-            System.out.println("Date range: " + start + " to " + end);
+            LocalDateTime start = LocalDateTime.parse(startTime, DateTimeFormatter.ISO_LOCAL_DATE_TIME);
+            LocalDateTime end = LocalDateTime.parse(endTime, DateTimeFormatter.ISO_LOCAL_DATE_TIME);
             List<DataRecord> data = dataManagementService.getDataByTimeRange(start, end);
-            System.out.println("Retrieved " + data.size() + " records in range");
             return ResponseEntity.ok(data);
         } catch (Exception e) {
-            System.err.println("Error retrieving data by range: " + e.getMessage());
-            e.printStackTrace();
-            return ResponseEntity.internalServerError().build();
+            return ResponseEntity.badRequest().build();
         }
     }
     
@@ -121,116 +102,136 @@ public class DataController {
     @GetMapping("/stats")
     public ResponseEntity<Map<String, Object>> getDataStats() {
         try {
-            System.out.println("=== GET /api/data/stats called ===");
             Map<String, Object> stats = dataManagementService.getDataStats();
             return ResponseEntity.ok(stats);
         } catch (Exception e) {
-            System.err.println("Error retrieving data stats: " + e.getMessage());
-            e.printStackTrace();
-            return ResponseEntity.internalServerError().build();
+            Map<String, Object> errorStats = new HashMap<>();
+            errorStats.put("error", e.getMessage());
+            return ResponseEntity.badRequest().body(errorStats);
         }
     }
     
-    // Export data
+    // Export data as JSON
     @GetMapping("/export/json")
-    public ResponseEntity<String> exportToJson(
+    public ResponseEntity<String> exportDataAsJson(
             @RequestParam(required = false) String sourceId,
             @RequestParam(required = false) String dataType,
-            @RequestParam(defaultValue = "24") int hours) {
+            @RequestParam(defaultValue = "1000") int limit) {
         try {
-            System.out.println("=== GET /api/data/export/json called ===");
             List<DataRecord> data;
-            
             if (sourceId != null) {
                 data = dataManagementService.getDataBySource(sourceId);
             } else if (dataType != null) {
                 data = dataManagementService.getDataByType(dataType);
             } else {
-                data = dataManagementService.getRecentData(hours);
+                data = dataManagementService.getRecentData(limit);
             }
             
-            String json = dataManagementService.exportToJson(data);
-            System.out.println("Exported " + data.size() + " records to JSON");
-            
+            String jsonResult = dataManagementService.exportToJson(data);
             return ResponseEntity.ok()
-                .header("Content-Type", "application/json")
-                .header("Content-Disposition", "attachment; filename=data_export.json")
-                .body(json);
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(jsonResult);
         } catch (Exception e) {
-            System.err.println("Error exporting to JSON: " + e.getMessage());
-            e.printStackTrace();
-            return ResponseEntity.internalServerError().build();
+            return ResponseEntity.badRequest().body("{\"error\": \"" + e.getMessage() + "\"}");
         }
     }
     
+    // Export data as CSV
     @GetMapping("/export/csv")
-    public ResponseEntity<String> exportToCsv(
+    public ResponseEntity<String> exportDataAsCsv(
             @RequestParam(required = false) String sourceId,
             @RequestParam(required = false) String dataType,
-            @RequestParam(defaultValue = "24") int hours) {
+            @RequestParam(defaultValue = "1000") int limit) {
         try {
-            System.out.println("=== GET /api/data/export/csv called ===");
             List<DataRecord> data;
-            
             if (sourceId != null) {
                 data = dataManagementService.getDataBySource(sourceId);
             } else if (dataType != null) {
                 data = dataManagementService.getDataByType(dataType);
             } else {
-                data = dataManagementService.getRecentData(hours);
+                data = dataManagementService.getRecentData(limit);
             }
             
-            String csv = dataManagementService.exportToCsv(data);
-            System.out.println("Exported " + data.size() + " records to CSV");
-            
+            String csvResult = dataManagementService.exportToCsv(data);
             return ResponseEntity.ok()
-                .header("Content-Type", "text/csv")
-                .header("Content-Disposition", "attachment; filename=data_export.csv")
-                .body(csv);
+                    .contentType(MediaType.parseMediaType("text/csv"))
+                    .header("Content-Disposition", "attachment; filename=\"data_export.csv\"")
+                    .body(csvResult);
         } catch (Exception e) {
-            System.err.println("Error exporting to CSV: " + e.getMessage());
-            e.printStackTrace();
-            return ResponseEntity.internalServerError().build();
+            return ResponseEntity.badRequest().body("Error," + e.getMessage());
         }
     }
     
-    // Data cleanup
+    // Cleanup old data
     @DeleteMapping("/cleanup")
     public ResponseEntity<Map<String, Object>> cleanupOldData(@RequestParam(defaultValue = "30") int daysOld) {
         try {
-            System.out.println("=== DELETE /api/data/cleanup called ===");
-            long deletedCount = dataManagementService.cleanupOldData(daysOld);
-            System.out.println("Deleted " + deletedCount + " old records");
-            
-            return ResponseEntity.ok(Map.of(
-                "deletedRecords", deletedCount,
-                "message", "Successfully cleaned up data older than " + daysOld + " days"
-            ));
+            // Fixed: cleanupOldData returns Map<String, Object>, not long
+            Map<String, Object> result = dataManagementService.cleanupOldData(daysOld);
+            return ResponseEntity.ok(result);
         } catch (Exception e) {
-            System.err.println("Error cleaning up data: " + e.getMessage());
-            e.printStackTrace();
-            return ResponseEntity.internalServerError().build();
+            Map<String, Object> errorResult = new HashMap<>();
+            errorResult.put("success", false);
+            errorResult.put("error", e.getMessage());
+            return ResponseEntity.badRequest().body(errorResult);
         }
     }
     
-    // Request DTOs
-    public static class DataStoreRequest {
-        private String sourceId;
-        private String dataType;
-        private Object payload;
-        private Map<String, Object> metadata;
-        
-        // Getters and setters
-        public String getSourceId() { return sourceId; }
-        public void setSourceId(String sourceId) { this.sourceId = sourceId; }
-        
-        public String getDataType() { return dataType; }
-        public void setDataType(String dataType) { this.dataType = dataType; }
-        
-        public Object getPayload() { return payload; }
-        public void setPayload(Object payload) { this.payload = payload; }
-        
-        public Map<String, Object> getMetadata() { return metadata; }
-        public void setMetadata(Map<String, Object> metadata) { this.metadata = metadata; }
+    // Get stored data with filters (uses the existing getStoredData method)
+    @GetMapping("/stored")
+    public ResponseEntity<List<Map<String, Object>>> getStoredData(@RequestParam Map<String, String> filters) {
+        try {
+            List<Map<String, Object>> data = dataManagementService.getStoredData(filters);
+            return ResponseEntity.ok(data);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+    
+    // Get storage status
+    @GetMapping("/storage-status")
+    public ResponseEntity<Map<String, Object>> getStorageStatus() {
+        try {
+            Map<String, Object> status = dataManagementService.getStorageStatus();
+            return ResponseEntity.ok(status);
+        } catch (Exception e) {
+            Map<String, Object> errorStatus = new HashMap<>();
+            errorStatus.put("error", e.getMessage());
+            return ResponseEntity.badRequest().body(errorStatus);
+        }
+    }
+    
+    // Health check endpoint
+    @GetMapping("/health")
+    public ResponseEntity<Map<String, Object>> healthCheck() {
+        Map<String, Object> health = new HashMap<>();
+        health.put("status", "UP");
+        health.put("timestamp", LocalDateTime.now().toString());
+        health.put("service", "DataController");
+        return ResponseEntity.ok(health);
+    }
+    
+    // Search data records
+    @GetMapping("/search")
+    public ResponseEntity<List<DataRecord>> searchData(
+            @RequestParam(required = false) String query,
+            @RequestParam(required = false) String sourceId,
+            @RequestParam(required = false) String dataType,
+            @RequestParam(defaultValue = "100") int limit) {
+        try {
+            List<DataRecord> data;
+            
+            if (sourceId != null && !sourceId.isEmpty()) {
+                data = dataManagementService.getDataBySource(sourceId);
+            } else if (dataType != null && !dataType.isEmpty()) {
+                data = dataManagementService.getDataByType(dataType);
+            } else {
+                data = dataManagementService.getRecentData(limit);
+            }
+            
+            return ResponseEntity.ok(data);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().build();
+        }
     }
 }

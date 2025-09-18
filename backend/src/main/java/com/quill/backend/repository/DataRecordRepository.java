@@ -3,7 +3,6 @@ package com.quill.backend.repository;
 import com.quill.backend.model.DataRecord;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -15,27 +14,14 @@ public interface DataRecordRepository extends JpaRepository<DataRecord, Long> {
     
     List<DataRecord> findByDataTypeOrderByTimestampDesc(String dataType);
     
-    List<DataRecord> findByTimestampBetweenOrderByTimestampDesc(LocalDateTime start, LocalDateTime end);
+    @Query("SELECT d FROM DataRecord d ORDER BY d.timestamp DESC LIMIT ?1")
+    List<DataRecord> findTopByOrderByTimestampDesc(int limit);
     
-    List<DataRecord> findBySourceIdAndTimestampBetweenOrderByTimestampDesc(
-        String sourceId, LocalDateTime start, LocalDateTime end);
+    List<DataRecord> findByTimestampBetweenOrderByTimestampDesc(LocalDateTime startTime, LocalDateTime endTime);
     
-    @Query("SELECT d FROM DataRecord d WHERE d.timestamp >= :since ORDER BY d.timestamp DESC")
-    List<DataRecord> findRecentData(@Param("since") LocalDateTime since);
+    List<DataRecord> findByTimestampBefore(LocalDateTime cutoffDate);
     
-    @Query("SELECT COUNT(d) FROM DataRecord d WHERE d.sourceId = :sourceId")
-    long countBySourceId(@Param("sourceId") String sourceId);
+    long countByTimestampAfter(LocalDateTime timestamp);
     
-    @Query("SELECT COUNT(d) FROM DataRecord d WHERE d.timestamp >= :since")
-    long countRecentData(@Param("since") LocalDateTime since);
-    
-    @Query("SELECT DISTINCT d.sourceId FROM DataRecord d")
-    List<String> findDistinctSourceIds();
-    
-    @Query("SELECT DISTINCT d.dataType FROM DataRecord d")
-    List<String> findDistinctDataTypes();
-    
-    void deleteByTimestampBefore(LocalDateTime cutoff);
-    
-    void deleteBySourceId(String sourceId);
+    long countByStatus(DataRecord.DataStatus status);
 }

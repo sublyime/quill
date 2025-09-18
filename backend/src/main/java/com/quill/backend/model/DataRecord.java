@@ -5,11 +5,7 @@ import com.fasterxml.jackson.annotation.JsonFormat;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "data_records", indexes = {
-    @Index(name = "idx_timestamp", columnList = "timestamp"),
-    @Index(name = "idx_source_timestamp", columnList = "sourceId, timestamp"),
-    @Index(name = "idx_data_type", columnList = "dataType")
-})
+@Table(name = "data_records")
 public class DataRecord {
     
     @Id
@@ -22,15 +18,11 @@ public class DataRecord {
     @Column(nullable = false)
     private String dataType;
     
-    @Column(length = 4000)
+    @Column(length = 10000)
     private String payload;
     
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
-    @Column(nullable = false)
     private LocalDateTime timestamp = LocalDateTime.now();
-    
-    @Column(length = 1000)
-    private String metadata;
     
     @Enumerated(EnumType.STRING)
     private DataStatus status = DataStatus.ACTIVE;
@@ -38,8 +30,8 @@ public class DataRecord {
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime createdAt = LocalDateTime.now();
     
-    @Column(name = "storage_config_id")
-    private Long storageConfigId;
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private LocalDateTime updatedAt = LocalDateTime.now();
     
     // Constructors
     public DataRecord() {}
@@ -48,6 +40,9 @@ public class DataRecord {
         this.sourceId = sourceId;
         this.dataType = dataType;
         this.payload = payload;
+        this.timestamp = LocalDateTime.now();
+        this.createdAt = LocalDateTime.now();
+        this.updatedAt = LocalDateTime.now();
     }
     
     // Getters and Setters
@@ -66,30 +61,22 @@ public class DataRecord {
     public LocalDateTime getTimestamp() { return timestamp; }
     public void setTimestamp(LocalDateTime timestamp) { this.timestamp = timestamp; }
     
-    public String getMetadata() { return metadata; }
-    public void setMetadata(String metadata) { this.metadata = metadata; }
-    
     public DataStatus getStatus() { return status; }
     public void setStatus(DataStatus status) { this.status = status; }
     
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
     
-    public Long getStorageConfigId() { return storageConfigId; }
-    public void setStorageConfigId(Long storageConfigId) { this.storageConfigId = storageConfigId; }
+    public LocalDateTime getUpdatedAt() { return updatedAt; }
+    public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
     
-    // Data Status Enum
+    // Enum for data status
     public enum DataStatus {
-        ACTIVE, ARCHIVED, DELETED, ERROR
+        ACTIVE, INACTIVE, ARCHIVED, ERROR
     }
     
-    @PrePersist
-    void prePersist() {
-        if (timestamp == null) {
-            timestamp = LocalDateTime.now();
-        }
-        if (createdAt == null) {
-            createdAt = LocalDateTime.now();
-        }
+    @PreUpdate
+    void preUpdate() {
+        updatedAt = LocalDateTime.now();
     }
 }

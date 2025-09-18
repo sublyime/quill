@@ -1,5 +1,4 @@
 com\quill\backend\service\UserService$1.class
-com\quill\backend\service\DataManagementService$1.class
 com\quill\backend\model\User$UserRole.class
 com\quill\backend\config\WebConfig$1.class
 com\quill\backend\model\Connection$ConnectionStatus.class
@@ -7,24 +6,19 @@ com\quill\backend\model\DataRecord$DataStatus.class
 com\quill\backend\repository\ConnectionRepository.class
 com\quill\backend\service\DataManagementService.class
 com\quill\backend\controller\StorageController.class
+com\quill\backend\model\Storage$StorageStatus.class
+com\quill\backend\model\Storage.class
 com\quill\backend\repository\DataRecordRepository.class
 com\quill\backend\model\StorageConfig.class
 com\quill\backend\model\StorageConfig$StorageStatus.class
 com\quill\backend\model\Connection.class
 com\quill\backend\model\User$UserStatus.class
 com\quill\backend\QuillApplication.class
-com\quill\backend\service\DataManagementService$2.class
 com\quill\backend\controller\UserController.class
-com\quill\backend\service\StorageService$1.class
 com\quill\backend\repository\UserRepository.class
-com\quill\backend\service\UserService$UserProfileSummary.class
 com\quill\backend\controller\DataController.class
-com\quill\backend\controller\DataController$DataStoreRequest.class
-com\quill\backend\service\StorageService$2.class
-com\quill\backend\controller\StorageController$StorageCreateRequest.class
 com\quill\backend\service\ConnectionService$ConnectionStats.class
 com\quill\backend\config\WebConfig.class
-com\quill\backend\controller\UserController$UserStats.class
 com\quill\backend\model\StorageConfig$StorageType.class
 com\quill\backend\controller\ConnectionController.class
 com\quill\backend\model\User.class
@@ -34,3 +28,4 @@ com\quill\backend\service\ConnectionService.class
 com\quill\backend\model\DataRecord.class
 com\quill\backend\model\User$Permission.class
 com\quill\backend\repository\StorageConfigRepository.class
+com\quill\backend\repository\StorageRepository.class

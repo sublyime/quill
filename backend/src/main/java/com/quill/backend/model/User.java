@@ -2,6 +2,7 @@ package com.quill.backend.model;
 
 import jakarta.persistence.*;
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import java.time.LocalDateTime;
 import java.util.Set;
 import java.util.HashSet;
@@ -20,6 +21,7 @@ public class User {
     @Column(nullable = false, unique = true)
     private String email;
     
+    @JsonIgnore // Don't expose password in JSON responses
     @Column(nullable = false)
     private String password;
     
@@ -55,6 +57,8 @@ public class User {
         this.username = username;
         this.email = email;
         this.password = password;
+        this.createdAt = LocalDateTime.now();
+        this.updatedAt = LocalDateTime.now();
     }
     
     // Getters and Setters
@@ -94,14 +98,30 @@ public class User {
     public LocalDateTime getUpdatedAt() { return updatedAt; }
     public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
     
+    // Helper methods
+    public boolean isActive() {
+        return status == UserStatus.ACTIVE;
+    }
+    
+    public String getFullName() {
+        if (firstName != null && lastName != null) {
+            return firstName + " " + lastName;
+        } else if (firstName != null) {
+            return firstName;
+        } else if (lastName != null) {
+            return lastName;
+        }
+        return username;
+    }
+    
     // Enums
     public enum UserRole {
         ADMIN, EDITOR, VIEWER, MANAGER, ANALYST
     }
     
     public enum Permission {
-        READ, WRITE, DELETE, ADMIN, MANAGE_USERS, MANAGE_STORAGE, MANAGE_CONNECTIONS
-    }
+    READ, WRITE, DELETE, ADMIN, MANAGE_USERS, MANAGE_STORAGE, MANAGE_CONNECTIONS
+}
     
     public enum UserStatus {
         ACTIVE, INACTIVE, SUSPENDED, PENDING

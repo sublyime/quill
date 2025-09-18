@@ -52,25 +52,57 @@ public class UserService {
         return userRepository.save(user);
     }
     
+    // Create new user
+    public User createUser(String username, String email, String password, String firstName, String lastName) {
+        User user = new User();
+        user.setUsername(username);
+        user.setEmail(email);
+        user.setPassword(password); // In production, hash this password
+        user.setFirstName(firstName);
+        user.setLastName(lastName);
+        user.setStatus(User.UserStatus.ACTIVE);
+        user.setCreatedAt(LocalDateTime.now());
+        user.setUpdatedAt(LocalDateTime.now());
+        
+        // Set default role
+        Set<User.UserRole> defaultRoles = new HashSet<>();
+        defaultRoles.add(User.UserRole.VIEWER);
+        user.setRoles(defaultRoles);
+        
+        // Set default permissions - FIXED: Use correct enum values
+        Set<User.Permission> defaultPermissions = new HashSet<>();
+        defaultPermissions.add(User.Permission.READ);
+        user.setPermissions(defaultPermissions);
+        
+        return userRepository.save(user);
+    }
+    
     // Update user
-    public User update(Long id, User updatedUser) {
-        User existingUser = findById(id).orElseThrow(() -> new RuntimeException("User not found"));
+    public User updateUser(Long id, String username, String email, String firstName, String lastName, String phone) {
+        User user = findById(id).orElseThrow(() -> new RuntimeException("User not found"));
         
-        existingUser.setUsername(updatedUser.getUsername());
-        existingUser.setEmail(updatedUser.getEmail());
-        existingUser.setFirstName(updatedUser.getFirstName());
-        existingUser.setLastName(updatedUser.getLastName());
-        existingUser.setPhone(updatedUser.getPhone());
-        existingUser.setStatus(updatedUser.getStatus());
-        existingUser.setRoles(updatedUser.getRoles());
-        existingUser.setPermissions(updatedUser.getPermissions());
-        existingUser.setUpdatedAt(LocalDateTime.now());
+        if (username != null && !username.trim().isEmpty()) {
+            user.setUsername(username);
+        }
+        if (email != null && !email.trim().isEmpty()) {
+            user.setEmail(email);
+        }
+        if (firstName != null && !firstName.trim().isEmpty()) {
+            user.setFirstName(firstName);
+        }
+        if (lastName != null && !lastName.trim().isEmpty()) {
+            user.setLastName(lastName);
+        }
+        if (phone != null && !phone.trim().isEmpty()) {
+            user.setPhone(phone);
+        }
         
-        return userRepository.save(existingUser);
+        user.setUpdatedAt(LocalDateTime.now());
+        return userRepository.save(user);
     }
     
     // Delete user by ID
-    public void deleteById(Long id) {
+    public void deleteUser(Long id) {
         User user = findById(id).orElseThrow(() -> new RuntimeException("User not found"));
         userRepository.delete(user);
     }
@@ -78,7 +110,7 @@ public class UserService {
     // Search users by username or email
     public List<User> searchUsers(String searchTerm) {
         return userRepository.findAll().stream()
-                .filter(user -> 
+                .filter(user ->
                     user.getUsername().toLowerCase().contains(searchTerm.toLowerCase()) ||
                     user.getEmail().toLowerCase().contains(searchTerm.toLowerCase()) ||
                     (user.getFirstName() != null && user.getFirstName().toLowerCase().contains(searchTerm.toLowerCase())) ||
@@ -127,45 +159,6 @@ public class UserService {
         return userRepository.findAll().stream()
                 .filter(user -> user.getStatus() == User.UserStatus.ACTIVE)
                 .count();
-    }
-    
-    // Create new user
-    public User createUser(String username, String email, String password, String firstName, String lastName) {
-        User user = new User();
-        user.setUsername(username);
-        user.setEmail(email);
-        user.setPassword(password);
-        user.setFirstName(firstName);
-        user.setLastName(lastName);
-        user.setStatus(User.UserStatus.ACTIVE);
-        user.setCreatedAt(LocalDateTime.now());
-        user.setUpdatedAt(LocalDateTime.now());
-        
-        // Set default role
-        Set<User.UserRole> defaultRoles = new HashSet<>();
-        defaultRoles.add(User.UserRole.VIEWER);
-        user.setRoles(defaultRoles);
-        
-        // Set default permissions
-        Set<User.Permission> defaultPermissions = new HashSet<>();
-        defaultPermissions.add(User.Permission.READ);
-        user.setPermissions(defaultPermissions);
-        
-        return userRepository.save(user);
-    }
-    
-    // Update user
-    public User updateUser(Long id, String username, String email, String firstName, String lastName, String phone) {
-        User user = findById(id).orElseThrow(() -> new RuntimeException("User not found"));
-        
-        user.setUsername(username);
-        user.setEmail(email);
-        user.setFirstName(firstName);
-        user.setLastName(lastName);
-        user.setPhone(phone);
-        user.setUpdatedAt(LocalDateTime.now());
-        
-        return userRepository.save(user);
     }
     
     // Update user status
@@ -220,42 +213,17 @@ public class UserService {
         return user.getPermissions().contains(permission);
     }
     
-    // Delete user
-    public void deleteUser(Long id) {
+    // Change user password
+    public User changePassword(Long id, String newPassword) {
         User user = findById(id).orElseThrow(() -> new RuntimeException("User not found"));
-        userRepository.delete(user);
+        user.setPassword(newPassword); // In production, hash this password
+        user.setUpdatedAt(LocalDateTime.now());
+        return userRepository.save(user);
     }
     
-    // Find users by role
-    public List<User> findUsersByRole(User.UserRole role) {
-        return userRepository.findAll().stream()
-                .filter(user -> user.getRoles().contains(role))
-                .toList();
-    }
-    
-    // Find users by status
-    public List<User> findUsersByStatus(User.UserStatus status) {
-        return userRepository.findAll().stream()
-                .filter(user -> user.getStatus() == status)
-                .toList();
-    }
-    
-    // Get user count
-    public long getUserCount() {
-        return userRepository.count();
-    }
-    
-    // Get active user count
-    public long getActiveUserCount() {
-        return userRepository.findAll().stream()
-                .filter(user -> user.getStatus() == User.UserStatus.ACTIVE)
-                .count();
-    }
-    
-    // Set default permissions based on role
+    // Set default permissions based on role - FIXED: Use correct enum values
     public User assignDefaultPermissionsByRole(Long id, User.UserRole role) {
         User user = findById(id).orElseThrow(() -> new RuntimeException("User not found"));
-        
         Set<User.Permission> permissions = new HashSet<>();
         
         switch (role) {
@@ -268,7 +236,6 @@ public class UserService {
                 permissions.add(User.Permission.MANAGE_STORAGE);
                 permissions.add(User.Permission.MANAGE_CONNECTIONS);
                 break;
-                
             case MANAGER:
                 permissions.add(User.Permission.READ);
                 permissions.add(User.Permission.WRITE);
@@ -276,18 +243,15 @@ public class UserService {
                 permissions.add(User.Permission.MANAGE_STORAGE);
                 permissions.add(User.Permission.MANAGE_CONNECTIONS);
                 break;
-                
             case EDITOR:
                 permissions.add(User.Permission.READ);
                 permissions.add(User.Permission.WRITE);
                 permissions.add(User.Permission.MANAGE_CONNECTIONS);
                 break;
-                
             case ANALYST:
                 permissions.add(User.Permission.READ);
                 permissions.add(User.Permission.WRITE);
                 break;
-                
             case VIEWER:
             default:
                 permissions.add(User.Permission.READ);
@@ -297,84 +261,6 @@ public class UserService {
         user.setPermissions(permissions);
         user.getRoles().add(role);
         user.setUpdatedAt(LocalDateTime.now());
-        
         return userRepository.save(user);
-    }
-    
-    // Change user password
-    public User changePassword(Long id, String newPassword) {
-        User user = findById(id).orElseThrow(() -> new RuntimeException("User not found"));
-        user.setPassword(newPassword);
-        user.setUpdatedAt(LocalDateTime.now());
-        return userRepository.save(user);
-    }
-    
-    // Get user profile summary
-    public UserProfileSummary getUserProfile(Long id) {
-        User user = findById(id).orElseThrow(() -> new RuntimeException("User not found"));
-        
-        UserProfileSummary summary = new UserProfileSummary();
-        summary.setId(user.getId());
-        summary.setUsername(user.getUsername());
-        summary.setEmail(user.getEmail());
-        summary.setFirstName(user.getFirstName());
-        summary.setLastName(user.getLastName());
-        summary.setPhone(user.getPhone());
-        summary.setStatus(user.getStatus().toString());
-        summary.setRoles(user.getRoles().stream().map(Enum::toString).toList());
-        summary.setPermissions(user.getPermissions().stream().map(Enum::toString).toList());
-        summary.setCreatedAt(user.getCreatedAt());
-        summary.setUpdatedAt(user.getUpdatedAt());
-        
-        return summary;
-    }
-    
-    // Inner class for user profile summary
-    public static class UserProfileSummary {
-        private Long id;
-        private String username;
-        private String email;
-        private String firstName;
-        private String lastName;
-        private String phone;
-        private String status;
-        private List<String> roles;
-        private List<String> permissions;
-        private LocalDateTime createdAt;
-        private LocalDateTime updatedAt;
-        
-        // Getters and setters
-        public Long getId() { return id; }
-        public void setId(Long id) { this.id = id; }
-        
-        public String getUsername() { return username; }
-        public void setUsername(String username) { this.username = username; }
-        
-        public String getEmail() { return email; }
-        public void setEmail(String email) { this.email = email; }
-        
-        public String getFirstName() { return firstName; }
-        public void setFirstName(String firstName) { this.firstName = firstName; }
-        
-        public String getLastName() { return lastName; }
-        public void setLastName(String lastName) { this.lastName = lastName; }
-        
-        public String getPhone() { return phone; }
-        public void setPhone(String phone) { this.phone = phone; }
-        
-        public String getStatus() { return status; }
-        public void setStatus(String status) { this.status = status; }
-        
-        public List<String> getRoles() { return roles; }
-        public void setRoles(List<String> roles) { this.roles = roles; }
-        
-        public List<String> getPermissions() { return permissions; }
-        public void setPermissions(List<String> permissions) { this.permissions = permissions; }
-        
-        public LocalDateTime getCreatedAt() { return createdAt; }
-        public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
-        
-        public LocalDateTime getUpdatedAt() { return updatedAt; }
-        public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
     }
 }
