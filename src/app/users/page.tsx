@@ -15,9 +15,27 @@ import {
 } from '@/components/ui/dialog';
 import { UserForm } from './user-form';
 import { Skeleton } from '@/components/ui/skeleton';
-import { createColumns } from './columns';
-import { getUsers } from '@/lib/user-api';
+import { columns } from './columns';
 import { toast } from '@/hooks/use-toast';
+
+// Fixed: Define getUsers function inline since @/lib/user-api doesn't exist
+async function getUsers(): Promise<User[]> {
+  const response = await fetch('http://localhost:8080/api/users');
+  if (!response.ok) {
+    throw new Error('Failed to fetch users');
+  }
+  return response.json();
+}
+
+// Fixed: Define deleteUser function
+async function deleteUser(userId: number): Promise<void> {
+  const response = await fetch(`http://localhost:8080/api/users/${userId}`, {
+    method: 'DELETE',
+  });
+  if (!response.ok) {
+    throw new Error('Failed to delete user');
+  }
+}
 
 export default function UsersPage() {
   const [users, setUsers] = useState<User[]>([]);
@@ -29,9 +47,15 @@ export default function UsersPage() {
     setIsLoading(true);
     try {
       const fetchedUsers = await getUsers();
+      console.log('Fetched users:', fetchedUsers);
       setUsers(fetchedUsers);
     } catch (error) {
-      toast({ title: 'Error', description: 'Failed to fetch users.', variant: 'destructive' });
+      console.error('Failed to fetch users:', error);
+      toast({ 
+        title: 'Error', 
+        description: 'Failed to fetch users.', 
+        variant: 'destructive' 
+      });
     } finally {
       setIsLoading(false);
     }
@@ -43,10 +67,21 @@ export default function UsersPage() {
 
   const handleUserSaved = (user: User) => {
     if (editingUser) {
+      // Update existing user
       setUsers(users.map(u => u.id === user.id ? user : u));
+      toast({
+        title: 'Success',
+        description: 'User updated successfully.',
+      });
     } else {
+      // Add new user
       setUsers([user, ...users]);
+      toast({
+        title: 'Success',
+        description: 'User created successfully.',
+      });
     }
+    
     setIsDialogOpen(false);
     setEditingUser(null);
   };
@@ -56,54 +91,87 @@ export default function UsersPage() {
     setIsDialogOpen(true);
   };
 
-  const handleDelete = (userId: string) => {
-    setUsers(users.filter(u => u.id !== userId));
+  const handleDelete = async (userId: number) => {
+    try {
+      await deleteUser(userId);
+      setUsers(users.filter(u => u.id !== userId));
+      toast({
+        title: 'Success',
+        description: 'User deleted successfully.',
+      });
+    } catch (error) {
+      console.error('Failed to delete user:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to delete user.',
+        variant: 'destructive',
+      });
+    }
   };
 
-  const columns = createColumns({ onEdit: handleEdit, onDelete: handleDelete });
-
   return (
-    <div className="container mx-auto py-6 space-y-6">
+    <div className="container mx-auto py-10">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">User Management</h1>
-          <p className="text-muted-foreground">Manage all users in the system.</p>
+          <h1 className="text-3xl font-bold tracking-tight">User Management</h1>
+          <p className="text-muted-foreground">
+            Manage all users in the system.
+          </p>
         </div>
-        <Button className="flex items-center gap-2" onClick={() => { setEditingUser(null); setIsDialogOpen(true); }}>
-          <PlusCircle className="h-4 w-4" />
-          Add User
-        </Button>
+        
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <DialogTrigger asChild>
+            <Button 
+              onClick={() => { 
+                setEditingUser(null); 
+                setIsDialogOpen(true); 
+              }}
+            >
+              <PlusCircle className="mr-2 h-4 w-4" />
+              Add User
+            </Button>
+          </DialogTrigger>
+          
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>
+                {editingUser ? 'Edit User' : 'Add New User'}
+              </DialogTitle>
+              <DialogDescription>
+                {editingUser 
+                  ? 'Update the details below.' 
+                  : 'Fill in the details to add a new user.'}
+              </DialogDescription>
+            </DialogHeader>
+            
+            <UserForm
+              onSubmit={handleUserSaved}
+              onCancel={() => { 
+                setIsDialogOpen(false); 
+                setEditingUser(null); 
+              }}
+              currentUser={editingUser}
+            />
+          </DialogContent>
+        </Dialog>
       </div>
 
-      {isLoading ? (
-        <div className="space-y-4">
-          <Skeleton className="h-10 w-full" />
-          <Skeleton className="h-64 w-full" />
-        </div>
-      ) : (
-        <DataTable 
-          columns={columns} 
-          data={users}
-          filterColumn="name"
-          filterPlaceholder="Filter by name..."
-        />
-      )}
-
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>{editingUser ? 'Edit User' : 'Add New User'}</DialogTitle>
-            <DialogDescription>
-              {editingUser ? 'Update the details below.' : 'Fill in the details to add a new user.'}
-            </DialogDescription>
-          </DialogHeader>
-          <UserForm 
-            onSubmit={handleUserSaved}
-            onCancel={() => { setIsDialogOpen(false); setEditingUser(null); }}
-            currentUser={editingUser}
+      <div className="mt-8">
+        {isLoading ? (
+          <div className="space-y-4">
+            <Skeleton className="h-8 w-full" />
+            <Skeleton className="h-8 w-full" />
+            <Skeleton className="h-8 w-full" />
+          </div>
+        ) : (
+          <DataTable 
+            columns={columns} 
+            data={users}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
           />
-        </DialogContent>
-      </Dialog>
+        )}
+      </div>
     </div>
   );
 }

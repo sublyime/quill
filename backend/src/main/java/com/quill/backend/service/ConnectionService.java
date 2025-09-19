@@ -31,10 +31,10 @@ public class ConnectionService {
     }
     
     // Create new connection
-    public Connection createConnection(String name, String type, String configuration) {
+    public Connection createConnection(String name, String sourceType, String configuration) {
         Connection connection = new Connection();
         connection.setName(name);
-        connection.setType(type);
+        connection.setSourceType(sourceType);
         connection.setConfiguration(configuration);
         connection.setStatus(Connection.ConnectionStatus.INACTIVE);
         connection.setIsActive(false);
@@ -45,11 +45,11 @@ public class ConnectionService {
     }
     
     // Update connection
-    public Connection updateConnection(Long id, String name, String type, String configuration) {
+    public Connection updateConnection(Long id, String name, String sourceType, String configuration) {
         Connection connection = findById(id).orElseThrow(() -> new RuntimeException("Connection not found"));
         
         connection.setName(name);
-        connection.setType(type);
+        connection.setSourceType(sourceType);
         connection.setConfiguration(configuration);
         connection.setUpdatedAt(LocalDateTime.now());
         
@@ -111,10 +111,10 @@ public class ConnectionService {
         connectionRepository.delete(connection);
     }
     
-    // Find connections by type
-    public List<Connection> findByType(String type) {
+    // Find connections by source type
+    public List<Connection> findBySourceType(String sourceType) {
         return connectionRepository.findAll().stream()
-                .filter(conn -> conn.getType().equals(type))
+                .filter(conn -> conn.getSourceType().equals(sourceType))
                 .toList();
     }
     
@@ -160,11 +160,11 @@ public class ConnectionService {
         // based on the connection type and configuration
         
         try {
-            String type = connection.getType();
+            String sourceType = connection.getSourceType();
             String configuration = connection.getConfiguration();
             
             // Example: Parse configuration and test connection
-            switch (type.toUpperCase()) {
+            switch (sourceType.toUpperCase()) {
                 case "DATABASE":
                     return testDatabaseConnection(configuration);
                 case "API":
@@ -178,7 +178,7 @@ public class ConnectionService {
                 case "UDP":
                     return testUdpConnection(configuration);
                 default:
-                    System.out.println("Unknown connection type: " + type);
+                    System.out.println("Unknown connection type: " + sourceType);
                     return false;
             }
             

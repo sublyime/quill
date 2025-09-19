@@ -2,6 +2,7 @@ package com.quill.backend.service;
 
 import com.quill.backend.model.Storage;
 import com.quill.backend.repository.StorageRepository;
+import com.quill.backend.exception.StorageException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
@@ -45,7 +46,8 @@ public class StorageService {
     }
     
     public Storage testConnection(Long id) {
-        Storage storage = findById(id).orElseThrow(() -> new RuntimeException("Storage not found"));
+        Storage storage = findById(id).orElseThrow(() -> 
+            new StorageException("Storage configuration not found with id: " + id, "STORAGE_NOT_FOUND"));
         
         storage.setStatus(Storage.StorageStatus.TESTING);
         storage.setLastTestedAt(LocalDateTime.now());
@@ -59,6 +61,7 @@ public class StorageService {
         } catch (Exception e) {
             storage.setStatus(Storage.StorageStatus.ERROR);
             storage.setLastTestResult("Connection failed: " + e.getMessage());
+            throw new StorageException("Failed to connect to storage: " + e.getMessage(), "CONNECTION_ERROR");
         }
         
         return storageRepository.save(storage);
@@ -71,13 +74,18 @@ public class StorageService {
         storageRepository.saveAll(allStorage);
         
         // Set new default
-        Storage storage = findById(id).orElseThrow(() -> new RuntimeException("Storage not found"));
+        Storage storage = findById(id).orElseThrow(() -> 
+            new StorageException("Storage configuration not found with id: " + id, "STORAGE_NOT_FOUND"));
         storage.setIsDefault(true);
         return storageRepository.save(storage);
     }
     
     public void delete(Long id) {
-        Storage storage = findById(id).orElseThrow(() -> new RuntimeException("Storage not found"));
+        Storage storage = findById(id).orElseThrow(() -> 
+            new StorageException("Storage configuration not found with id: " + id, "STORAGE_NOT_FOUND"));
+        if (storage.getIsDefault()) {
+            throw new StorageException("Cannot delete the default storage configuration", "DELETE_DEFAULT_ERROR");
+        }
         storageRepository.delete(storage);
     }
     
@@ -97,7 +105,7 @@ public class StorageService {
     
     public Storage getDefaultStorageOrThrow() {
         return findDefaultStorage()
-                .orElseThrow(() -> new RuntimeException("No default storage configuration found"));
+                .orElseThrow(() -> new StorageException("No default storage configuration found", "NO_DEFAULT_STORAGE"));
     }
     
     public Storage createDefaultIfNone() {

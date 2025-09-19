@@ -32,9 +32,21 @@ public class ConnectionController {
     }
 
     @PostMapping
-    public ResponseEntity<Connection> createConnection(@RequestBody Connection connection) {
+    public ResponseEntity<?> createConnection(@RequestBody Connection connection) {
         try {
             System.out.println("=== POST /api/connections called ===");
+            
+            // Validate required fields
+            if (connection.getName() == null || connection.getName().trim().isEmpty()) {
+                return ResponseEntity.badRequest().body("Connection name is required");
+            }
+            if (connection.getSourceType() == null || connection.getSourceType().trim().isEmpty()) {
+                return ResponseEntity.badRequest().body("Source type is required");
+            }
+            
+            // Set the type to match the sourceType for now
+            connection.setType(connection.getSourceType());
+            
             System.out.println("Received connection: " + connection.getName());
             Connection saved = connectionRepository.save(connection);
             System.out.println("Successfully saved connection with ID: " + saved.getId());
@@ -43,7 +55,7 @@ public class ConnectionController {
             System.err.println("=== ERROR in createConnection ===");
             System.err.println("Error message: " + e.getMessage());
             e.printStackTrace();
-            return ResponseEntity.badRequest().build();
+            return ResponseEntity.badRequest().body("Failed to create connection: " + e.getMessage());
         }
     }
 

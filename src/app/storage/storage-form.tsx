@@ -72,10 +72,11 @@ export function StorageForm() {
       form.reset();
       setSelectedType(null);
       router.push('/storage');
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Error saving storage:', error);
       toast({
         title: 'Error',
-        description: 'Failed to save storage configuration. Please try again.',
+        description: error?.message || 'Failed to save storage configuration. Please try again.',
         variant: 'destructive',
       });
     } finally {

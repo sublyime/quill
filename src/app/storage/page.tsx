@@ -25,9 +25,11 @@ export default function StoragePage() {
     setIsLoading(true);
     try {
       const data = await apiFetchStorageConfigs();
-      setStorageConfigs(data);
+      setStorageConfigs(Array.isArray(data) ? data : []);
     } catch (error) {
+      console.error('Error loading storage configs:', error);
       toast({ title: 'Error', description: 'Failed to load storage configurations.', variant: 'destructive' });
+      setStorageConfigs([]);
     } finally {
       setIsLoading(false);
     }

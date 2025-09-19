@@ -4,6 +4,12 @@ C:\code\quill\backend\src\main\java\com\quill\backend\controller\DataController.
 C:\code\quill\backend\src\main\java\com\quill\backend\controller\ReportController.java
 C:\code\quill\backend\src\main\java\com\quill\backend\controller\StorageController.java
 C:\code\quill\backend\src\main\java\com\quill\backend\controller\UserController.java
+C:\code\quill\backend\src\main\java\com\quill\backend\dto\CreateUserRequest.java
+C:\code\quill\backend\src\main\java\com\quill\backend\dto\StorageCreateRequest.java
+C:\code\quill\backend\src\main\java\com\quill\backend\exception\GlobalExceptionHandler.java
+C:\code\quill\backend\src\main\java\com\quill\backend\exception\StorageException.java
+C:\code\quill\backend\src\main\java\com\quill\backend\model\ApiError.java
+C:\code\quill\backend\src\main\java\com\quill\backend\model\ApiResponse.java
 C:\code\quill\backend\src\main\java\com\quill\backend\model\Connection.java
 C:\code\quill\backend\src\main\java\com\quill\backend\model\DataRecord.java
 C:\code\quill\backend\src\main\java\com\quill\backend\model\Report.java

@@ -19,7 +19,8 @@ export const createStorageConfig = async (config: Omit<StorageConfig, 'id' | 'st
         body: JSON.stringify(config),
     });
     if (!response.ok) {
-        throw new Error('Failed to create storage configuration');
+        const errorText = await response.text();
+        throw new Error(errorText || 'Failed to create storage configuration');
     }
     return await response.json();
 };

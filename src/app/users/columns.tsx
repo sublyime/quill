@@ -13,23 +13,23 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
-import { deleteUser } from '@/lib/user-api';
-import { toast } from '@/hooks/use-toast';
 
+// Updated User type to match backend
 export type User = {
-  id: string;
-  name: string;
+  id: number;
+  username: string;
   email: string;
-  role: 'Admin' | 'Editor' | 'Viewer';
-  status: 'active' | 'inactive';
+  firstName?: string;
+  lastName?: string;
+  phone?: string;
+  roles?: string[];
+  status?: string;
+  createdAt?: string;
+  updatedAt?: string;
 };
 
-interface ColumnProps {
-  onEdit: (user: User) => void;
-  onDelete: (userId: string) => void;
-}
-
-export const createColumns = (props: ColumnProps): ColumnDef<User>[] => [
+// Export columns as default export
+export const columns: ColumnDef<User>[] = [
   {
     id: 'select',
     header: ({ table }) => (
@@ -50,28 +50,70 @@ export const createColumns = (props: ColumnProps): ColumnDef<User>[] => [
     enableHiding: false,
   },
   {
-    accessorKey: 'name',
-    header: ({ column }) => (
-      <Button
-        variant="ghost"
-        onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-      >
-        Name
-        <ArrowUpDown className="ml-2 h-4 w-4" />
-      </Button>
-    ),
+    accessorKey: 'username',
+    header: ({ column }) => {
+      return (
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+        >
+          Username
+          <ArrowUpDown className="ml-2 h-4 w-4" />
+        </Button>
+      );
+    },
+  },
+  {
+    accessorKey: 'firstName',
+    header: 'Name',
+    cell: ({ row }) => {
+      const firstName = row.getValue('firstName') as string;
+      const lastName = row.original.lastName;
+      return firstName && lastName ? `${firstName} ${lastName}` : firstName || lastName || '-';
+    },
   },
   {
     accessorKey: 'email',
-    header: 'Email',
+    header: ({ column }) => {
+      return (
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+        >
+          Email
+          <ArrowUpDown className="ml-2 h-4 w-4" />
+        </Button>
+      );
+    },
   },
   {
-    accessorKey: 'role',
-    header: 'Role',
+    accessorKey: 'phone',
+    header: 'Phone',
     cell: ({ row }) => {
-      const role = row.getValue('role') as string;
-      const variant = role === 'Admin' ? 'destructive' : role === 'Editor' ? 'secondary' : 'default';
-      return <Badge variant={variant as any}>{role}</Badge>;
+      const phone = row.getValue('phone') as string;
+      return phone || '-';
+    },
+  },
+  {
+    accessorKey: 'roles',
+    header: 'Roles',
+    cell: ({ row }) => {
+      const roles = row.getValue('roles') as string[];
+      if (!roles || roles.length === 0) return '-';
+      return (
+        <div className="flex gap-1">
+          {roles.slice(0, 2).map((role, index) => (
+            <Badge key={index} variant="secondary" className="text-xs">
+              {role}
+            </Badge>
+          ))}
+          {roles.length > 2 && (
+            <Badge variant="outline" className="text-xs">
+              +{roles.length - 2}
+            </Badge>
+          )}
+        </div>
+      );
     },
   },
   {
@@ -79,45 +121,56 @@ export const createColumns = (props: ColumnProps): ColumnDef<User>[] => [
     header: 'Status',
     cell: ({ row }) => {
       const status = row.getValue('status') as string;
-      return <Badge variant={status === 'active' ? 'default' : 'secondary'}>{status}</Badge>;
-    },
-  },
-  {
-    id: 'actions',
-    cell: ({ row }) => {
-      const user = row.original;
-
-      const handleDelete = async () => {
-        if (!confirm(`Are you sure you want to delete ${user.name}?`)) return;
-        try {
-          await deleteUser(user.id);
-          props.onDelete(user.id);
-          toast({ title: 'Success', description: `User ${user.name} deleted.` });
-        } catch (error) {
-          toast({ title: 'Error', description: 'Failed to delete user.', variant: 'destructive' });
-        }
-      };
-
+      const variant = status === 'ACTIVE' ? 'default' : 'secondary';
       return (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="h-8 w-8 p-0">
-              <span className="sr-only">Open menu</span>
-              <MoreHorizontal className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-            <DropdownMenuItem onClick={() => props.onEdit(user)}>
-              Edit user
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={handleDelete} className="text-red-600 focus:text-red-600">
-              Delete user
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <Badge variant={variant} className="text-xs">
+          {status || 'ACTIVE'}
+        </Badge>
       );
     },
   },
 ];
+
+// Export function to create columns with actions
+export function createColumns(actions: {
+  onEdit: (user: User) => void;
+  onDelete: (userId: number) => void;
+}): ColumnDef<User>[] {
+  return [
+    ...columns,
+    {
+      id: 'actions',
+      cell: ({ row }) => {
+        const user = row.original;
+        return (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="h-8 w-8 p-0">
+                <span className="sr-only">Open menu</span>
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuLabel>Actions</DropdownMenuLabel>
+              <DropdownMenuItem
+                onClick={() => navigator.clipboard.writeText(user.id.toString())}
+              >
+                Copy user ID
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => actions.onEdit(user)}>
+                Edit user
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                onClick={() => actions.onDelete(user.id)}
+                className="text-red-600"
+              >
+                Delete user
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        );
+      },
+    },
+  ];
+}

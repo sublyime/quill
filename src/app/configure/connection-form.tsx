@@ -150,14 +150,14 @@ export function ConnectionForm({ onAddConnection }: ConnectionFormProps) {
         body: JSON.stringify({
           name: data.connectionName,
           sourceType: data.dataSourceType,
-          config: JSON.stringify(filteredConfig),
+          configuration: JSON.stringify(filteredConfig), // Match backend field name
         }),
       });
 
       if (!response.ok) {
         const errorText = await response.text();
         console.error('Server response:', response.status, errorText);
-        throw new Error(`Failed to save connection: ${response.status} ${response.statusText}`);
+        throw new Error(errorText || `Failed to save connection: ${response.status} ${response.statusText}`);
       }
 
       const savedConnection = await response.json();

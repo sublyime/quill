@@ -2,6 +2,7 @@ package com.quill.backend.controller;
 
 import com.quill.backend.model.User;
 import com.quill.backend.service.UserService;
+import com.quill.backend.dto.CreateUserRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -29,44 +30,52 @@ public class UserController {
     }
     
     @PostMapping
-    public ResponseEntity<User> createUser(@RequestBody Map<String, Object> request) {
+    public ResponseEntity<?> createUser(@RequestBody CreateUserRequest request) {
         try {
-            String username = (String) request.get("username");
-            String email = (String) request.get("email");
-            String password = (String) request.get("password");
-            String firstName = (String) request.get("firstName");
-            String lastName = (String) request.get("lastName");
-            String phone = (String) request.get("phone");
-            
-            // Basic validation
-            if (username == null || username.trim().isEmpty()) {
-                return ResponseEntity.badRequest().build();
+            // Validation
+            if (request.getUsername() == null || request.getUsername().trim().isEmpty()) {
+                return ResponseEntity.badRequest().body("Username is required");
             }
-            if (email == null || email.trim().isEmpty()) {
-                return ResponseEntity.badRequest().build();
+            if (request.getEmail() == null || request.getEmail().trim().isEmpty()) {
+                return ResponseEntity.badRequest().body("Email is required");
             }
-            if (password == null || password.trim().isEmpty()) {
-                return ResponseEntity.badRequest().build();
+            if (request.getPassword() == null || request.getPassword().trim().isEmpty()) {
+                return ResponseEntity.badRequest().body("Password is required");
             }
-            
-            // Check if user already exists
-            if (userService.existsByUsername(username)) {
-                return ResponseEntity.badRequest().build();
+            if (request.getFirstName() == null || request.getFirstName().trim().isEmpty()) {
+                return ResponseEntity.badRequest().body("First name is required");
             }
-            if (userService.existsByEmail(email)) {
-                return ResponseEntity.badRequest().build();
+            if (request.getLastName() == null || request.getLastName().trim().isEmpty()) {
+                return ResponseEntity.badRequest().body("Last name is required");
             }
-            
-            User user = userService.createUser(username, email, password, firstName, lastName);
-            if (phone != null && !phone.trim().isEmpty()) {
-                user.setPhone(phone);
+
+            // Check for existing username/email
+            if (userService.existsByUsername(request.getUsername())) {
+                return ResponseEntity.badRequest().body("Username already exists");
+            }
+            if (userService.existsByEmail(request.getEmail())) {
+                return ResponseEntity.badRequest().body("Email already exists");
+            }
+
+            // Create user
+            User user = userService.createUser(
+                request.getUsername(),
+                request.getEmail(),
+                request.getPassword(),
+                request.getFirstName(),
+                request.getLastName()
+            );
+
+            // Set optional phone if provided
+            if (request.getPhone() != null && !request.getPhone().trim().isEmpty()) {
+                user.setPhone(request.getPhone());
                 user = userService.save(user);
             }
-            
+
             return ResponseEntity.ok(user);
         } catch (Exception e) {
             e.printStackTrace();
-            return ResponseEntity.badRequest().build();
+            return ResponseEntity.badRequest().body("Error creating user: " + e.getMessage());
         }
     }
     

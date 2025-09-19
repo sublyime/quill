@@ -15,6 +15,9 @@ public class Connection {
     @Column(nullable = false)
     private String name;
     
+    @Column(name = "source_type", nullable = false)
+    private String sourceType;
+    
     @Column(nullable = false)
     private String type;
     
@@ -45,9 +48,9 @@ public class Connection {
     // Constructors
     public Connection() {}
     
-    public Connection(String name, String type, String configuration) {
+    public Connection(String name, String sourceType, String configuration) {
         this.name = name;
-        this.type = type;
+        this.sourceType = sourceType;
         this.configuration = configuration;
     }
     
@@ -57,6 +60,9 @@ public class Connection {
     
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
+    
+    public String getSourceType() { return sourceType; }
+    public void setSourceType(String sourceType) { this.sourceType = sourceType; }
     
     public String getType() { return type; }
     public void setType(String type) { this.type = type; }

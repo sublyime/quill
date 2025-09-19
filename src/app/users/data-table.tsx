@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -13,7 +12,6 @@ import {
   getSortedRowModel,
   useReactTable,
 } from '@tanstack/react-table';
-
 import {
   Table,
   TableBody,
@@ -24,27 +22,36 @@ import {
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { User, createColumns } from './columns';
 
 interface DataTableProps<TData, TValue> {
-  columns: ColumnDef<TData, TValue>[];
+  columns?: ColumnDef<TData, TValue>[];
   data: TData[];
   filterColumn?: string;
   filterPlaceholder?: string;
+  onEdit?: (user: User) => void;
+  onDelete?: (userId: number) => void;
 }
 
 export function DataTable<TData, TValue>({
-  columns,
+  columns: providedColumns,
   data,
-  filterColumn,
-  filterPlaceholder,
+  filterColumn = 'username',
+  filterPlaceholder = 'Filter by username...',
+  onEdit,
+  onDelete,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
-   const [rowSelection, setRowSelection] = React.useState({})
+  const [rowSelection, setRowSelection] = React.useState({});
+
+  // Use createColumns with actions if onEdit/onDelete provided, otherwise use basic columns
+  const finalColumns = providedColumns || 
+    (onEdit && onDelete ? createColumns({ onEdit, onDelete }) : []) as ColumnDef<TData, TValue>[];
 
   const table = useReactTable({
     data,
-    columns,
+    columns: finalColumns,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     onSortingChange: setSorting,
@@ -60,23 +67,26 @@ export function DataTable<TData, TValue>({
   });
 
   return (
-    <div>
-       <div className="flex items-center justify-between py-4">
-        {filterColumn && (
-            <Input
-            placeholder={filterPlaceholder || `Filter by ${filterColumn}...`}
-            value={(table.getColumn(filterColumn)?.getFilterValue() as string) ?? ""}
+    <div className="space-y-4">
+      {/* Filter Input */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-2">
+          <Input
+            placeholder={filterPlaceholder}
+            value={(table.getColumn(filterColumn)?.getFilterValue() as string) ?? ''}
             onChange={(event) =>
-                table.getColumn(filterColumn)?.setFilterValue(event.target.value)
+              table.getColumn(filterColumn)?.setFilterValue(event.target.value)
             }
             className="max-w-sm"
-            />
-        )}
-        <div className="flex-1 text-sm text-muted-foreground ml-auto text-right">
-            {table.getFilteredSelectedRowModel().rows.length} of{" "}
-            {table.getFilteredRowModel().rows.length} row(s) selected.
+          />
+        </div>
+        <div className="text-sm text-muted-foreground">
+          {table.getFilteredSelectedRowModel().rows.length} of{' '}
+          {table.getFilteredRowModel().rows.length} row(s) selected.
         </div>
       </div>
+
+      {/* Table */}
       <div className="rounded-md border">
         <Table>
           <TableHeader>
@@ -116,10 +126,7 @@ export function DataTable<TData, TValue>({
               ))
             ) : (
               <TableRow>
-                <TableCell
-                  colSpan={columns.length}
-                  className="h-24 text-center"
-                >
+                <TableCell colSpan={finalColumns.length} className="h-24 text-center">
                   No results.
                 </TableCell>
               </TableRow>
@@ -127,23 +134,31 @@ export function DataTable<TData, TValue>({
           </TableBody>
         </Table>
       </div>
-      <div className="flex items-center justify-end space-x-2 py-4">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => table.previousPage()}
-          disabled={!table.getCanPreviousPage()}
-        >
-          Previous
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => table.nextPage()}
-          disabled={!table.getCanNextPage()}
-        >
-          Next
-        </Button>
+
+      {/* Pagination */}
+      <div className="flex items-center justify-end space-x-2">
+        <div className="flex-1 text-sm text-muted-foreground">
+          {table.getFilteredSelectedRowModel().rows.length} of{' '}
+          {table.getFilteredRowModel().rows.length} row(s) selected.
+        </div>
+        <div className="space-x-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => table.previousPage()}
+            disabled={!table.getCanPreviousPage()}
+          >
+            Previous
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => table.nextPage()}
+            disabled={!table.getCanNextPage()}
+          >
+            Next
+          </Button>
+        </div>
       </div>
     </div>
   );
