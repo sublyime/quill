@@ -47,9 +47,9 @@ export function ConnectionForm({ onAddConnection }: ConnectionFormProps) {
     
     config.fields.forEach(field => {
       if (field.type === 'number') {
-        defaultValues[field.name] = '';
+        defaultValues[field.name] = field.required ? 0 : undefined;
       } else {
-        defaultValues[field.name] = '';
+        defaultValues[field.name] = field.required ? '' : undefined;
       }
     });
     
@@ -106,21 +106,25 @@ export function ConnectionForm({ onAddConnection }: ConnectionFormProps) {
   // Reset form when data source changes
   const handleDataSourceChange = (newType: DataSourceType) => {
     setSelectedDataSource(newType);
+    const currentName = form.getValues('connectionName');
+    const defaultConfig = getDefaultConfigValues(newType);
+    
     form.reset({
-      connectionName: form.getValues('connectionName'),
+      connectionName: currentName || '',
       dataSourceType: newType,
-      config: getDefaultConfigValues(newType),
+      config: defaultConfig,
     });
   };
 
-  // Update form defaults when selectedDataSource changes
+  // Initialize form with defaults
   useEffect(() => {
+    const defaultConfig = getDefaultConfigValues(selectedDataSource);
     form.reset({
-      connectionName: form.getValues('connectionName'),
+      connectionName: '',
       dataSourceType: selectedDataSource,
-      config: getDefaultConfigValues(selectedDataSource),
+      config: defaultConfig,
     });
-  }, [selectedDataSource]);
+  }, []);
 
   async function onSubmit(data: FormSchema) {
     setLoading(true);
@@ -290,7 +294,7 @@ export function ConnectionForm({ onAddConnection }: ConnectionFormProps) {
                             {field.type === 'select' && field.options ? (
                               <Select 
                                 onValueChange={formField.onChange} 
-                                value={formField.value || ''}
+                                value={formField.value === undefined ? '' : formField.value}
                               >
                                 <SelectTrigger>
                                   <SelectValue placeholder={`Select ${field.label}`} />
@@ -308,7 +312,9 @@ export function ConnectionForm({ onAddConnection }: ConnectionFormProps) {
                                 type={field.type === 'number' ? 'number' : field.type === 'password' ? 'password' : 'text'}
                                 placeholder={field.placeholder}
                                 {...formField}
-                                value={formField.value || ''}
+                                value={field.type === 'number' ? 
+                                  (formField.value === undefined || formField.value === '' ? '' : String(formField.value)) 
+                                  : formField.value === undefined ? '' : formField.value}
                               />
                             )}
                           </FormControl>
