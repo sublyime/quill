@@ -15,7 +15,7 @@ import {
 } from '@/components/ui/dialog';
 import { UserForm } from './user-form';
 import { Skeleton } from '@/components/ui/skeleton';
-import { columns } from './columns';
+import { createColumns } from './columns';
 import { toast } from '@/hooks/use-toast';
 
 // Fixed: Define getUsers function inline since @/lib/user-api doesn't exist
@@ -42,6 +42,24 @@ export default function UsersPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
+
+  const handleDeleteUser = async (user: User) => {
+    try {
+      await deleteUser(user.id);
+      setUsers(users.filter(u => u.id !== user.id));
+      toast({
+        title: "Success",
+        description: "User deleted successfully",
+      });
+      fetchUsers(); // Refresh the user list
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete user",
+        variant: "destructive",
+      });
+    }
+  };
 
   const fetchUsers = useCallback(async () => {
     setIsLoading(true);
@@ -165,10 +183,10 @@ export default function UsersPage() {
           </div>
         ) : (
           <DataTable 
-            columns={columns} 
+            columns={createColumns({
+              onDelete: handleDeleteUser
+            })}
             data={users}
-            onEdit={handleEdit}
-            onDelete={handleDelete}
           />
         )}
       </div>

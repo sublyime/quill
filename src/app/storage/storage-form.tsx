@@ -60,14 +60,15 @@ export function StorageForm() {
   async function onSubmit(values: FormValues) {
     setIsSubmitting(true);
     try {
-        await createStorageConfig({
+        const result = await createStorageConfig({
             name: values.name,
             storageType: values.storageType as StorageType,
-            configuration: values.configuration || {},
+            configuration: JSON.stringify(values.configuration || {}),
         });
-      toast({
-        title: 'Configuration Saved',
-        description: `Your ${STORAGE_CONFIGS[selectedType!]?.name} configuration "${values.name}" has been successfully saved.`,
+        router.refresh(); // Refresh the page to show the new config
+        toast({
+            title: 'Configuration Saved',
+            description: `Your ${STORAGE_CONFIGS[selectedType!]?.name} configuration "${values.name}" has been successfully saved.`,
       });
       form.reset();
       setSelectedType(null);

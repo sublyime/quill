@@ -4,11 +4,21 @@ import { ColumnDef } from '@tanstack/react-table';
 import { MoreHorizontal, ArrowUpDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -28,8 +38,8 @@ export type User = {
   updatedAt?: string;
 };
 
-// Export columns as default export
-export const columns: ColumnDef<User>[] = [
+// Define base columns without actions
+const baseColumns: ColumnDef<User>[] = [
   {
     id: 'select',
     header: ({ table }) => (
@@ -98,19 +108,24 @@ export const columns: ColumnDef<User>[] = [
     accessorKey: 'roles',
     header: 'Roles',
     cell: ({ row }) => {
-      const roles = row.getValue('roles') as string[];
-      if (!roles || roles.length === 0) return '-';
+      const roles = row.original.roles || [];
       return (
-        <div className="flex gap-1">
-          {roles.slice(0, 2).map((role, index) => (
-            <Badge key={index} variant="secondary" className="text-xs">
-              {role}
-            </Badge>
-          ))}
-          {roles.length > 2 && (
-            <Badge variant="outline" className="text-xs">
-              +{roles.length - 2}
-            </Badge>
+        <div className="flex flex-wrap gap-1">
+          {roles.length === 0 ? (
+            '-'
+          ) : (
+            <>
+              {roles.slice(0, 2).map((role, index) => (
+                <Badge key={index} variant="secondary" className="text-xs">
+                  {role.toLowerCase()}
+                </Badge>
+              ))}
+              {roles.length > 2 && (
+                <Badge variant="outline" className="text-xs">
+                  +{roles.length - 2}
+                </Badge>
+              )}
+            </>
           )}
         </div>
       );
@@ -131,18 +146,18 @@ export const columns: ColumnDef<User>[] = [
   },
 ];
 
-// Export function to create columns with actions
-export function createColumns(actions: {
-  onEdit: (user: User) => void;
-  onDelete: (userId: number) => void;
-}): ColumnDef<User>[] {
-  return [
-    ...columns,
-    {
-      id: 'actions',
-      cell: ({ row }) => {
-        const user = row.original;
-        return (
+// Export function to create columns with delete action
+export const createColumns = (handlers: {
+  onDelete: (user: User) => void;
+}): ColumnDef<User>[] => [
+  ...baseColumns,
+  {
+    id: 'actions',
+    cell: ({ row }) => {
+      const user = row.original;
+      
+      return (
+        <AlertDialog>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="h-8 w-8 p-0">
@@ -152,25 +167,38 @@ export function createColumns(actions: {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuLabel>Actions</DropdownMenuLabel>
-              <DropdownMenuItem
-                onClick={() => navigator.clipboard.writeText(user.id.toString())}
-              >
-                Copy user ID
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => actions.onEdit(user)}>
-                Edit user
-              </DropdownMenuItem>
-              <DropdownMenuItem 
-                onClick={() => actions.onDelete(user.id)}
-                className="text-red-600"
-              >
-                Delete user
-              </DropdownMenuItem>
+              <AlertDialogTrigger asChild>
+                <DropdownMenuItem className="text-red-600">
+                  Delete User
+                </DropdownMenuItem>
+              </AlertDialogTrigger>
             </DropdownMenuContent>
           </DropdownMenu>
-        );
-      },
+
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This will permanently delete the user &quot;{user.username}&quot;
+                {user.firstName && user.lastName 
+                  ? ` (${user.firstName} ${user.lastName})`
+                  : ''
+                }. This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => handlers.onDelete(user)}
+                className="bg-red-600 hover:bg-red-700"
+              >
+                Delete
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      );
     },
-  ];
-}
+  },
+];
+

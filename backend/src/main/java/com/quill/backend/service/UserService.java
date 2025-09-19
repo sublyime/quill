@@ -53,7 +53,7 @@ public class UserService {
     }
     
     // Create new user
-    public User createUser(String username, String email, String password, String firstName, String lastName) {
+    public User createUser(String username, String email, String password, String firstName, String lastName, User.UserRole role) {
         User user = new User();
         user.setUsername(username);
         user.setEmail(email);
@@ -64,15 +64,43 @@ public class UserService {
         user.setCreatedAt(LocalDateTime.now());
         user.setUpdatedAt(LocalDateTime.now());
         
-        // Set default role
-        Set<User.UserRole> defaultRoles = new HashSet<>();
-        defaultRoles.add(User.UserRole.VIEWER);
-        user.setRoles(defaultRoles);
+        // Set role
+        Set<User.UserRole> roles = new HashSet<>();
+        roles.add(role != null ? role : User.UserRole.VIEWER);
+        user.setRoles(roles);
         
-        // Set default permissions - FIXED: Use correct enum values
-        Set<User.Permission> defaultPermissions = new HashSet<>();
-        defaultPermissions.add(User.Permission.READ);
-        user.setPermissions(defaultPermissions);
+        // Set permissions based on role
+        Set<User.Permission> permissions = new HashSet<>();
+        User.UserRole effectiveRole = (role != null) ? role : User.UserRole.VIEWER;
+        
+        // Always add READ permission
+        permissions.add(User.Permission.READ);
+        
+        switch (effectiveRole) {
+            case ADMIN:
+                permissions.add(User.Permission.WRITE);
+                permissions.add(User.Permission.DELETE);
+                permissions.add(User.Permission.ADMIN);
+                permissions.add(User.Permission.MANAGE_USERS);
+                permissions.add(User.Permission.MANAGE_STORAGE);
+                permissions.add(User.Permission.MANAGE_CONNECTIONS);
+                break;
+            case MANAGER:
+                permissions.add(User.Permission.WRITE);
+                permissions.add(User.Permission.MANAGE_USERS);
+                permissions.add(User.Permission.MANAGE_STORAGE);
+                break;
+            case EDITOR:
+                permissions.add(User.Permission.WRITE);
+                break;
+            case ANALYST:
+                permissions.add(User.Permission.WRITE);
+                break;
+            case VIEWER:
+                // READ permission already added
+                break;
+        }
+        user.setPermissions(permissions);
         
         return userRepository.save(user);
     }
@@ -101,9 +129,26 @@ public class UserService {
         return userRepository.save(user);
     }
     
-    // Delete user by ID
+    /**
+     * Delete a user by their ID
+     * @param id The ID of the user to delete
+     * @throws RuntimeException if the user is not found
+     * @throws IllegalStateException if trying to delete the last admin user
+     */
     public void deleteUser(Long id) {
-        User user = findById(id).orElseThrow(() -> new RuntimeException("User not found"));
+        User user = findById(id).orElseThrow(() -> new RuntimeException("User not found with ID: " + id));
+        
+        // Check if this is the last admin user
+        if (user.getRoles().contains(User.UserRole.ADMIN)) {
+            long adminCount = userRepository.findAll().stream()
+                .filter(u -> u.getRoles().contains(User.UserRole.ADMIN))
+                .count();
+            if (adminCount <= 1) {
+                throw new IllegalStateException("Cannot delete the last admin user");
+            }
+        }
+
+        // The cascade delete will handle user_roles and user_permissions
         userRepository.delete(user);
     }
     

@@ -31,15 +31,28 @@ public class User {
     
     @Enumerated(EnumType.STRING)
     @ElementCollection(fetch = FetchType.EAGER)
-    @CollectionTable(name = "user_roles", joinColumns = @JoinColumn(name = "user_id"))
+    @CollectionTable(
+        name = "user_roles",
+        joinColumns = @JoinColumn(name = "user_id"),
+        foreignKey = @ForeignKey(name = "fk_user_roles_user_id")
+    )
     @Column(name = "role")
     private Set<UserRole> roles = new HashSet<>();
     
     @Enumerated(EnumType.STRING)
     @ElementCollection(fetch = FetchType.EAGER)
-    @CollectionTable(name = "user_permissions", joinColumns = @JoinColumn(name = "user_id"))
+    @CollectionTable(
+        name = "user_permissions",
+        joinColumns = @JoinColumn(name = "user_id"),
+        foreignKey = @ForeignKey(name = "fk_user_permissions_user_id")
+    )
     @Column(name = "permission")
     private Set<Permission> permissions = new HashSet<>();
+
+    // Convert permission to database format
+    private String formatPermission(Permission permission) {
+        return permission.name();
+    }
     
     @Enumerated(EnumType.STRING)
     private UserStatus status = UserStatus.ACTIVE;
@@ -120,8 +133,25 @@ public class User {
     }
     
     public enum Permission {
-    READ, WRITE, DELETE, ADMIN, MANAGE_USERS, MANAGE_STORAGE, MANAGE_CONNECTIONS
-}
+        READ("READ"), 
+        WRITE("WRITE"), 
+        DELETE("DELETE"), 
+        ADMIN("ADMIN"), 
+        MANAGE_USERS("MANAGE_USERS"), 
+        MANAGE_STORAGE("MANAGE_STORAGE"), 
+        MANAGE_CONNECTIONS("MANAGE_CONNECTIONS");
+
+        private final String value;
+
+        Permission(String value) {
+            this.value = value;
+        }
+
+        @Override
+        public String toString() {
+            return value;
+        }
+    }
     
     public enum UserStatus {
         ACTIVE, INACTIVE, SUSPENDED, PENDING

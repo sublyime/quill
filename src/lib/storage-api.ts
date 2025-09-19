@@ -9,10 +9,11 @@ export const fetchStorageConfigs = async (): Promise<StorageConfig[]> => {
   if (!response.ok) {
     throw new Error('Failed to fetch storage configurations');
   }
-  return await response.json();
+  const apiResponse = await response.json();
+  return apiResponse.data || [];
 };
 
-export const createStorageConfig = async (config: Omit<StorageConfig, 'id' | 'status' | 'isDefault' | 'isActive' | 'createdAt' | 'updatedAt'>): Promise<StorageConfig> => {
+export const createStorageConfig = async (config: Omit<StorageConfig, 'id' | 'status' | 'isDefault' | 'isActive' | 'createdAt' | 'updatedAt'> & { configuration: string }): Promise<StorageConfig> => {
     const response = await fetch(API_BASE_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -22,12 +23,26 @@ export const createStorageConfig = async (config: Omit<StorageConfig, 'id' | 'st
         const errorText = await response.text();
         throw new Error(errorText || 'Failed to create storage configuration');
     }
-    return await response.json();
+    const apiResponse = await response.json();
+    if (apiResponse.error) {
+        throw new Error(apiResponse.message || 'Failed to create storage configuration');
+    }
+    return apiResponse.data;
+};
+
+export const deleteStorageConfig = async (id: number): Promise<void> => {
+    const response = await fetch(`${API_BASE_URL}/${id}`, {
+        method: 'DELETE',
+    });
+    if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || 'Failed to delete storage configuration');
+    }
 };
 
 export const testConnection = async (id: number): Promise<StorageConfig> => {
-  const response = await fetch(`${API_BASE_URL}/${id}/test`, { method: 'POST' });
-  if (!response.ok) {
+    const response = await fetch(`${API_BASE_URL}/${id}/test`, { method: 'POST' });
+    if (!response.ok) {
     throw new Error('Failed to test storage connection');
   }
   return await response.json();

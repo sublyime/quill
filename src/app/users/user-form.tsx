@@ -13,6 +13,7 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from '@/hooks/use-toast';
 import { User } from './columns';
 import { useState, useEffect } from 'react';
@@ -25,6 +26,7 @@ const formSchema = z.object({
   firstName: z.string().min(1, 'First name is required.'),
   lastName: z.string().min(1, 'Last name is required.'),
   phone: z.string().optional(),
+  role: z.enum(['ADMIN', 'EDITOR', 'VIEWER', 'MANAGER', 'ANALYST']).default('VIEWER'),
 });
 
 type UserFormValues = z.infer<typeof formSchema>;
@@ -39,12 +41,19 @@ interface UserFormProps {
 async function createUser(userData: UserFormValues): Promise<User> {
   console.log('Creating user with data:', userData);
   
+  // Transform the data to match backend expectations
+  const requestData = {
+    ...userData,
+    role: userData.role, // Send the role as a single value
+    status: 'ACTIVE',
+  };
+  
   const response = await fetch('http://localhost:8080/api/users', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify(userData),
+    body: JSON.stringify(requestData),
   });
 
   if (!response.ok) {
@@ -89,6 +98,7 @@ export function UserForm({ onSubmit, onCancel, currentUser }: UserFormProps) {
       firstName: '',
       lastName: '',
       phone: '',
+      role: 'VIEWER',
     },
   });
 
@@ -234,6 +244,31 @@ export function UserForm({ onSubmit, onCancel, currentUser }: UserFormProps) {
               <FormControl>
                 <Input type="tel" placeholder="Enter phone number" {...field} />
               </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="role"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Role</FormLabel>
+              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a role" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="VIEWER">Viewer</SelectItem>
+                  <SelectItem value="EDITOR">Editor</SelectItem>
+                  <SelectItem value="ANALYST">Analyst</SelectItem>
+                  <SelectItem value="MANAGER">Manager</SelectItem>
+                  <SelectItem value="ADMIN">Admin</SelectItem>
+                </SelectContent>
+              </Select>
               <FormMessage />
             </FormItem>
           )}

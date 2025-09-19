@@ -11,7 +11,7 @@ import { STORAGE_CONFIGS } from './storage-types';
 import {
   fetchStorageConfigs as apiFetchStorageConfigs,
   testConnection as apiTestConnection,
-  deleteStorage as apiDeleteStorage,
+  deleteStorageConfig,
   setAsDefault as apiSetAsDefault,
 } from '@/lib/storage-api';
 import type { StorageConfig } from './storage-types';
@@ -39,14 +39,42 @@ export default function StoragePage() {
     fetchStorageConfigs();
   }, [fetchStorageConfigs]);
 
+  const handleDelete = async (config: StorageConfig) => {
+    if (!window.confirm(`Are you sure you want to delete the storage configuration "${config.name}"?`)) {
+      return;
+    }
+    try {
+      await deleteStorageConfig(config.id);
+      setStorageConfigs(prev => prev.filter(c => c.id !== config.id));
+      toast({
+        title: 'Storage Deleted',
+        description: `Storage configuration "${config.name}" has been deleted.`,
+      });
+    } catch (error) {
+      console.error('Error deleting storage:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to delete storage configuration.',
+        variant: 'destructive',
+      });
+    }
+  };
+
   const testConnection = async (id: number) => {
     setTestingIds(prev => new Set(prev).add(id));
     try {
       const updatedConfig = await apiTestConnection(id);
       setStorageConfigs(prev => prev.map(config => config.id === id ? updatedConfig : config));
-      toast({ title: 'Connection Test', description: updatedConfig.lastTestResult || 'Connection test completed' });
+      toast({ 
+        title: 'Connection Test', 
+        description: updatedConfig.lastTestResult || 'Connection test completed'
+      });
     } catch (error) {
-      toast({ title: 'Test Failed', description: 'Failed to test storage connection', variant: 'destructive' });
+      toast({ 
+        title: 'Test Failed', 
+        description: 'Failed to test storage connection', 
+        variant: 'destructive' 
+      });
     } finally {
       setTestingIds(prev => {
         const newSet = new Set(prev);
@@ -59,7 +87,7 @@ export default function StoragePage() {
   const deleteStorage = async (id: number, name: string) => {
     if (!confirm(`Are you sure you want to delete "${name}"?`)) return;
     try {
-      await apiDeleteStorage(id);
+      await deleteStorageConfig(id);
       setStorageConfigs(prev => prev.filter(config => config.id !== id));
       toast({ title: 'Storage Deleted', description: `"${name}" has been deleted.` });
     } catch (error) {

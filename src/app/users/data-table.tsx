@@ -25,33 +25,25 @@ import { Input } from '@/components/ui/input';
 import { User, createColumns } from './columns';
 
 interface DataTableProps<TData, TValue> {
-  columns?: ColumnDef<TData, TValue>[];
+  columns: ColumnDef<TData, TValue>[];
   data: TData[];
   filterColumn?: string;
   filterPlaceholder?: string;
-  onEdit?: (user: User) => void;
-  onDelete?: (userId: number) => void;
 }
 
 export function DataTable<TData, TValue>({
-  columns: providedColumns,
+  columns,
   data,
   filterColumn = 'username',
   filterPlaceholder = 'Filter by username...',
-  onEdit,
-  onDelete,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
   const [rowSelection, setRowSelection] = React.useState({});
 
-  // Use createColumns with actions if onEdit/onDelete provided, otherwise use basic columns
-  const finalColumns = providedColumns || 
-    (onEdit && onDelete ? createColumns({ onEdit, onDelete }) : []) as ColumnDef<TData, TValue>[];
-
   const table = useReactTable({
     data,
-    columns: finalColumns,
+    columns,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     onSortingChange: setSorting,
@@ -126,7 +118,7 @@ export function DataTable<TData, TValue>({
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={finalColumns.length} className="h-24 text-center">
+                <TableCell colSpan={columns.length} className="h-24 text-center">
                   No results.
                 </TableCell>
               </TableRow>

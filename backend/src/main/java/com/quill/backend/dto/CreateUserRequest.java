@@ -1,5 +1,7 @@
 package com.quill.backend.dto;
 
+import com.quill.backend.model.User;
+
 public class CreateUserRequest {
     private String username;
     private String email;
@@ -7,6 +9,7 @@ public class CreateUserRequest {
     private String firstName;
     private String lastName;
     private String phone;
+    private User.UserRole role;
 
     // Getters and Setters
     public String getUsername() { return username; }
@@ -26,4 +29,7 @@ public class CreateUserRequest {
 
     public String getPhone() { return phone; }
     public void setPhone(String phone) { this.phone = phone; }
+    
+    public User.UserRole getRole() { return role; }
+    public void setRole(User.UserRole role) { this.role = role; }
 }

@@ -24,8 +24,8 @@ export interface StorageConfig {
   id: number;
   name: string;
   storageType: StorageType;
-  configuration: any;
-  status: 'ACTIVE' | 'INACTIVE' | 'ERROR' | 'TESTING';
+  configuration: string | Record<string, any>;
+  status: 'ACTIVE' | 'INACTIVE' | 'ERROR' | 'TESTING' | 'CONFIGURED';
   isDefault: boolean;
   isActive: boolean;
   createdAt: string;
