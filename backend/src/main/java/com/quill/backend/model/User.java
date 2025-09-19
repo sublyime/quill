@@ -48,11 +48,6 @@ public class User {
     )
     @Column(name = "permission")
     private Set<Permission> permissions = new HashSet<>();
-
-    // Convert permission to database format
-    private String formatPermission(Permission permission) {
-        return permission.name();
-    }
     
     @Enumerated(EnumType.STRING)
     private UserStatus status = UserStatus.ACTIVE;

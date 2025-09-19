@@ -1,159 +1,172 @@
+﻿'use client';
 
-'use client';
-
-import { Responsive, WidthProvider } from 'react-grid-layout';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+import { useState } from 'react';
+import { PlusCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { RealtimeChart } from '@/components/dashboard/realtime-chart';
-import { BarChartSimple } from '@/components/dashboard/bar-chart-simple';
-import { PieChartSimple } from '@/components/dashboard/pie-chart-simple';
-import { Thermometer, Zap, Gauge, Users, PieChart as PieChartIcon, Settings } from 'lucide-react';
+import type { DashboardWidget, WidgetType } from '@/types/dashboard';
+import { DashboardContainer } from '@/components/dashboard/dashboard-container';
+import { WidgetConfigurationDialog } from '@/components/dashboard/widget-configuration-dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { buttonVariants } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
+import { BarChart3, LineChart, PieChart, Table2, Activity } from 'lucide-react';
 
-const ResponsiveGridLayout = WidthProvider(Responsive);
+const WIDGET_TYPES: Array<{
+  type: WidgetType;
+  label: string;
+  icon: React.ReactNode;
+  description: string;
+}> = [
+  {
+    type: 'line-chart',
+    label: 'Line Chart',
+    icon: <LineChart className="h-6 w-6" />,
+    description: 'Visualize trends over time',
+  },
+  {
+    type: 'bar-chart',
+    label: 'Bar Chart',
+    icon: <BarChart3 className="h-6 w-6" />,
+    description: 'Compare values across categories',
+  },
+  {
+    type: 'pie-chart',
+    label: 'Pie Chart',
+    icon: <PieChart className="h-6 w-6" />,
+    description: 'Show proportions of a whole',
+  },
+  {
+    type: 'stats',
+    label: 'Stats Card',
+    icon: <Activity className="h-6 w-6" />,
+    description: 'Display key metrics and trends',
+  },
+  {
+    type: 'table',
+    label: 'Table',
+    icon: <Table2 className="h-6 w-6" />,
+    description: 'Show detailed data in rows and columns',
+  },
+];
 
 export default function DashboardPage() {
-    const layouts = {
-        lg: [
-            { i: 'a', x: 0, y: 0, w: 1, h: 1 },
-            { i: 'b', x: 1, y: 0, w: 1, h: 1 },
-            { i: 'c', x: 2, y: 0, w: 1, h: 1 },
-            { i: 'd', x: 0, y: 1, w: 1, h: 1 },
-            { i: 'e', x: 1, y: 1, w: 1, h: 1 },
-            { i: 'f', x: 2, y: 1, w: 1, h: 1.5, minW: 1, minH: 1.5 },
-        ],
-    };
+  const [widgets, setWidgets] = useState<DashboardWidget[]>([]);
+  const [showTypeSelector, setShowTypeSelector] = useState(false);
+  const [showConfigDialog, setShowConfigDialog] = useState(false);
+  const [selectedWidgetType, setSelectedWidgetType] = useState<WidgetType | undefined>();
+  const [editingWidget, setEditingWidget] = useState<DashboardWidget | undefined>();
+
+  const handleAddWidgetClick = () => {
+    setShowTypeSelector(true);
+  };
+
+  const handleTypeSelect = (type: WidgetType) => {
+    setSelectedWidgetType(type);
+    setShowTypeSelector(false);
+    setShowConfigDialog(true);
+  };
+
+  const handleWidgetDelete = (widgetId: string) => {
+    setWidgets(prev => prev.filter(widget => widget.id !== widgetId));
+  };
+
+  const handleWidgetEdit = (widget: DashboardWidget) => {
+    setEditingWidget(widget);
+    setSelectedWidgetType(widget.type);
+    setShowConfigDialog(true);
+  };
+
+  const handleWidgetSave = (config: Partial<DashboardWidget>) => {
+    if (editingWidget) {
+      // Update existing widget
+      setWidgets(prev => prev.map(widget => {
+        if (widget.id === editingWidget.id) {
+          return {
+            ...widget,
+            ...config,
+            type: widget.type, // Preserve the original type
+          } as DashboardWidget;
+        }
+        return widget;
+      }));
+      setEditingWidget(undefined);
+    } else if (selectedWidgetType) {
+      // Add new widget with the correct type
+      const newWidget = {
+        id: crypto.randomUUID(),
+        ...config,
+        type: selectedWidgetType,
+      } as DashboardWidget;
+      setWidgets(prev => [...prev, newWidget]);
+    }
+    setSelectedWidgetType(undefined);
+    setShowConfigDialog(false);
+  };
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
-        <p className="text-muted-foreground">
-          Real-time monitoring of your data sources. Drag, drop, and resize to customize your view.
-        </p>
+    <div className="container mx-auto py-6">
+      <div className="flex justify-between items-center mb-6">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
+          <p className="text-sm text-muted-foreground">
+            Monitor and manage your data in real-time
+          </p>
+        </div>
+        <Button onClick={handleAddWidgetClick}>
+          <PlusCircle className="w-4 h-4 mr-2" />
+          Add Widget
+        </Button>
       </div>
+      
+      <DashboardContainer
+        widgets={widgets}
+        onWidgetDelete={handleWidgetDelete}
+        onWidgetEdit={handleWidgetEdit}
+      />
 
-      <ResponsiveGridLayout
-        className="layout"
-        layouts={layouts}
-        breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
-        cols={{ lg: 3, md: 2, sm: 1, xs: 1, xxs: 1 }}
-        rowHeight={300}
-        isResizable
-        isDraggable
-      >
-        <div key="a">
-           <Card className="w-full h-full">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">
-                    Industrial Sensor Temperature
-                    </CardTitle>
-                    <div className="flex items-center gap-2">
-                        <Button variant="ghost" size="icon" className="h-4 w-4">
-                            <Settings className="h-4 w-4 text-muted-foreground" />
-                        </Button>
-                        <Thermometer className="h-4 w-4 text-muted-foreground" />
-                    </div>
-                </CardHeader>
-                <CardContent>
-                    <RealtimeChart yAxisLabel="°C" initialValue={45} minValue={30} maxValue={90} />
-                </CardContent>
-            </Card>
-        </div>
-         <div key="b">
-             <Card className="w-full h-full">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">
-                    Device Connections
-                    </CardTitle>
-                    <div className="flex items-center gap-2">
-                        <Button variant="ghost" size="icon" className="h-4 w-4">
-                            <Settings className="h-4 w-4 text-muted-foreground" />
-                        </Button>
-                        <Users className="h-4 w-4 text-muted-foreground" />
-                    </div>
-                </CardHeader>
-                <CardContent>
-                    <BarChartSimple />
-                </CardContent>
-            </Card>
-        </div>
-         <div key="c">
-             <Card className="w-full h-full">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">
-                    Data Source Types
-                    </CardTitle>
-                    <div className="flex items-center gap-2">
-                        <Button variant="ghost" size="icon" className="h-4 w-4">
-                            <Settings className="h-4 w-4 text-muted-foreground" />
-                        </Button>
-                        <PieChartIcon className="h-4 w-4 text-muted-foreground" />
-                    </div>
-                </CardHeader>
-                <CardContent>
-                    <PieChartSimple />
-                </CardContent>
-            </Card>
-        </div>
-         <div key="d">
-             <Card className="w-full h-full">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">
-                    IoT Device Voltage
-                    </CardTitle>
-                     <div className="flex items-center gap-2">
-                        <Button variant="ghost" size="icon" className="h-4 w-4">
-                            <Settings className="h-4 w-4 text-muted-foreground" />
-                        </Button>
-                        <Zap className="h-4 w-4 text-muted-foreground" />
-                    </div>
-                </CardHeader>
-                <CardContent>
-                    <RealtimeChart yAxisLabel="V" initialValue={3.3} minValue={2.8} maxValue={3.8} precision={2} />
-                </CardContent>
-            </Card>
-        </div>
-         <div key="e">
-             <Card className="w-full h-full">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">
-                    System Pressure
-                    </CardTitle>
-                    <div className="flex items-center gap-2">
-                        <Button variant="ghost" size="icon" className="h-4 w-4">
-                            <Settings className="h-4 w-4 text-muted-foreground" />
-                        </Button>
-                        <Gauge className="h-4 w-4 text-muted-foreground" />
-                    </div>
-                </CardHeader>
-                <CardContent>
-                    <RealtimeChart yAxisLabel="PSI" initialValue={100} minValue={80} maxValue={150} />
-                </CardContent>
-            </Card>
-        </div>
-         <div key="f">
-            <Card className="w-full h-full">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <div>
-                        <CardTitle>Combined Feed</CardTitle>
-                        <CardDescription>A larger view of multiple data points.</CardDescription>
-                    </div>
-                     <Button variant="ghost" size="icon" className="h-4 w-4">
-                        <Settings className="h-4 w-4 text-muted-foreground" />
-                    </Button>
-                </CardHeader>
-                <CardContent className="h-[calc(100%-72px)] pt-6">
-                    <RealtimeChart yAxisLabel="Value" initialValue={500} minValue={0} maxValue={1000} />
-                </CardContent>
-            </Card>
-        </div>
-      </ResponsiveGridLayout>
+      <Dialog open={showTypeSelector} onOpenChange={setShowTypeSelector}>
+        <DialogContent className="sm:max-w-xl">
+          <DialogHeader>
+            <DialogTitle>Select Widget Type</DialogTitle>
+            <DialogDescription>
+              Choose the type of widget you want to add to your dashboard.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="grid grid-cols-2 gap-4">
+            {WIDGET_TYPES.map(({ type, label, icon, description }) => (
+              <button
+                key={type}
+                className={cn(
+                  buttonVariants({ variant: 'outline', size: 'lg' }),
+                  'h-auto flex flex-col items-center space-y-2 p-4'
+                )}
+                onClick={() => handleTypeSelect(type)}
+              >
+                {icon}
+                <div className="font-medium">{label}</div>
+                <div className="text-sm text-muted-foreground text-center">
+                  {description}
+                </div>
+              </button>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <WidgetConfigurationDialog
+        open={showConfigDialog}
+        onOpenChange={setShowConfigDialog}
+        widgetType={selectedWidgetType}
+        initialConfig={editingWidget}
+        onSave={handleWidgetSave}
+      />
     </div>
   );
 }
