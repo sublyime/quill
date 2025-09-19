@@ -20,14 +20,21 @@ export interface StorageConfigField {
 }
 
 // This represents a configured storage instance.
+// ApiResponse type for backend responses
+export interface ApiResponse<T> {
+  data: T;
+  message?: string;
+  error?: boolean;
+}
+
 export interface StorageConfig {
-  id: number;
+  id?: number;
   name: string;
   storageType: StorageType;
   configuration: string | Record<string, any>;
-  status: 'ACTIVE' | 'INACTIVE' | 'ERROR' | 'TESTING' | 'CONFIGURED';
-  isDefault: boolean;
-  isActive: boolean;
+  status?: 'ACTIVE' | 'INACTIVE' | 'ERROR' | 'TESTING' | 'CONFIGURED';
+  isDefault?: boolean;
+  isActive?: boolean;
   createdAt: string;
   updatedAt: string;
   lastTestedAt?: string;

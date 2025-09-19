@@ -84,14 +84,41 @@ export default function StoragePage() {
     }
   };
 
-  const deleteStorage = async (id: number, name: string) => {
+  const deleteStorage = async (id: number | undefined, name: string) => {
+    // Can't delete if no ID
+    if (!id) {
+      toast({ 
+        title: 'Error', 
+        description: 'Cannot delete storage: Invalid ID', 
+        variant: 'destructive' 
+      });
+      return;
+    }
+
+    // Check if this is the default storage
+    const config = storageConfigs.find(c => c.id === id);
+    if (config?.isDefault) {
+      toast({ 
+        title: 'Cannot Delete Default', 
+        description: 'Please set another storage as default before deleting this one.', 
+        variant: 'destructive' 
+      });
+      return;
+    }
+
     if (!confirm(`Are you sure you want to delete "${name}"?`)) return;
+    
     try {
       await deleteStorageConfig(id);
       setStorageConfigs(prev => prev.filter(config => config.id !== id));
       toast({ title: 'Storage Deleted', description: `"${name}" has been deleted.` });
-    } catch (error) {
-      toast({ title: 'Delete Failed', description: 'Failed to delete storage configuration', variant: 'destructive' });
+    } catch (error: any) {
+      console.error('Delete error:', error);
+      toast({ 
+        title: 'Delete Failed', 
+        description: error?.message || 'Failed to delete storage configuration', 
+        variant: 'destructive' 
+      });
     }
   };
 
@@ -180,7 +207,7 @@ export default function StoragePage() {
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {storageConfigs.map((config) => {
             const storageTypeConfig = STORAGE_CONFIGS[config.storageType as keyof typeof STORAGE_CONFIGS];
-            const isTestingThis = testingIds.has(config.id);
+            const isTestingThis = config.id ? testingIds.has(config.id) : false;
             
             return (
               <Card key={config.id} className="flex flex-col">
@@ -197,12 +224,12 @@ export default function StoragePage() {
                     </div>
                     <div className="flex items-center space-x-2">
                       {config.isDefault && (
-                        <Badge variant="default" className="text-xs">Default</Badge>
+                        <Badge key="default" variant="default" className="text-xs">Default</Badge>
                       )}
-                      <Badge className={`text-xs ${getStatusColor(config.status)}`}>
+                      <Badge key="status" className={`text-xs ${getStatusColor(config.status || 'CONFIGURED')}`}>
                         <div className="flex items-center space-x-1">
-                          {getStatusIcon(config.status)}
-                          <span>{config.status}</span>
+                          {getStatusIcon(config.status || 'CONFIGURED')}
+                          <span>{config.status || 'CONFIGURED'}</span>
                         </div>
                       </Badge>
                     </div>
@@ -215,7 +242,7 @@ export default function StoragePage() {
                       {new Date(config.createdAt).toLocaleDateString()}
                     </div>
                     {config.lastTestedAt && (
-                      <div className="text-sm">
+                      <div key="last-tested" className="text-sm">
                         <span className="font-medium">Last Tested:</span>{' '}
                         {new Date(config.lastTestedAt).toLocaleDateString()}
                       </div>
@@ -227,21 +254,22 @@ export default function StoragePage() {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => testConnection(config.id)}
+                        onClick={() => config.id && testConnection(config.id)}
                         disabled={isTestingThis}
                       >
                         {isTestingThis ? (
-                          <Clock className="h-3 w-3 mr-1 animate-spin" />
+                          <Clock key="testing-icon" className="h-3 w-3 mr-1 animate-spin" />
                         ) : (
-                          <TestTube className="h-3 w-3 mr-1" />
+                          <TestTube key="test-icon" className="h-3 w-3 mr-1" />
                         )}
                         Test
                       </Button>
                       {!config.isDefault && (
                         <Button
+                          key="set-default-button"
                           variant="outline"
                           size="sm"
-                          onClick={() => setAsDefault(config.id, config.name)}
+                          onClick={() => config.id && setAsDefault(config.id, config.name)}
                         >
                           Set Default
                         </Button>
@@ -251,6 +279,8 @@ export default function StoragePage() {
                       variant="destructive"
                       size="sm"
                       onClick={() => deleteStorage(config.id, config.name)}
+                      disabled={config.isDefault}
+                      title={config.isDefault ? "Cannot delete default storage" : "Delete storage"}
                     >
                       <Trash2 className="h-3 w-3" />
                     </Button>
