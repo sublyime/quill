@@ -8,11 +8,24 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import org.springframework.beans.factory.annotation.Autowired;
+import com.quill.backend.service.StorageService;
+import com.quill.backend.model.Storage;
+import com.quill.backend.stream.StorageStreamHandler;
+import com.quill.backend.stream.StreamHandlerFactory;
+import java.util.Optional;
 
 public class TerminalWebSocketHandler extends TextWebSocketHandler {
     private static final Logger logger = LoggerFactory.getLogger(TerminalWebSocketHandler.class);
     private final Map<String, WebSocketSession> sessions = new ConcurrentHashMap<>();
     private final Map<String, String> sessionToConnection = new ConcurrentHashMap<>();
+    private final Map<String, StorageStreamHandler> activeHandlers = new ConcurrentHashMap<>();
+    
+    @Autowired
+    private StorageService storageService;
+    
+    @Autowired
+    private StreamHandlerFactory streamHandlerFactory;
 
     @Override
     public void afterConnectionEstablished(@NonNull WebSocketSession session) throws Exception {
@@ -36,18 +49,65 @@ public class TerminalWebSocketHandler extends TextWebSocketHandler {
         // Handle data streaming for the connected data source
         String connectionId = sessionToConnection.get(session.getId());
         if (connectionId != null) {
-            // TODO: Implement actual data streaming from the connection
-            // For now, just echo back the command with a prefix
-            String response = "\r\n$ " + payload + "\r\n";
-            session.sendMessage(new TextMessage(response));
+            try {
+                Long storageId = Long.parseLong(connectionId);
+                Optional<Storage> storage = storageService.findById(storageId);
+                
+                if (storage.isPresent()) {
+                    Storage connection = storage.get();
+                    if (connection.getStatus() != Storage.StorageStatus.ACTIVE) {
+                        session.sendMessage(new TextMessage("\r\n\u001b[31mError: Connection is not active. Current status: " + 
+                            connection.getStatus() + "\u001b[0m\r\n"));
+                        return;
+                    }
+                    
+                    // Get or create stream handler for this session
+                    StorageStreamHandler handler = activeHandlers.computeIfAbsent(
+                        session.getId(),
+                        k -> {
+                            StorageStreamHandler newHandler = streamHandlerFactory.createHandler(connection.getStorageType());
+                            newHandler.initialize(connection);
+                            return newHandler;
+                        }
+                    );
+                    
+                    // Execute the command through the handler
+                    handler.executeCommand(payload, session)
+                        .exceptionally(e -> {
+                            try {
+                                logger.error("Error executing command", e);
+                                session.sendMessage(new TextMessage("\r\n\u001b[31mError: " + e.getMessage() + "\u001b[0m\r\n"));
+                            } catch (Exception ex) {
+                                logger.error("Failed to send error message", ex);
+                            }
+                            return null;
+                        });
+                    
+                } else {
+                    session.sendMessage(new TextMessage("\r\n\u001b[31mError: Connection not found\u001b[0m\r\n"));
+                }
+            } catch (NumberFormatException e) {
+                session.sendMessage(new TextMessage("\r\n\u001b[31mError: Invalid connection ID\u001b[0m\r\n"));
+            } catch (Exception e) {
+                logger.error("Error handling terminal command", e);
+                session.sendMessage(new TextMessage("\r\n\u001b[31mError: " + e.getMessage() + "\u001b[0m\r\n"));
+            }
         }
     }
 
     @Override
     public void afterConnectionClosed(@NonNull WebSocketSession session, @NonNull org.springframework.web.socket.CloseStatus status) throws Exception {
         String sessionId = session.getId();
+        
+        // Clean up session resources
         sessions.remove(sessionId);
         sessionToConnection.remove(sessionId);
+        
+        // Close and remove the stream handler
+        StorageStreamHandler handler = activeHandlers.remove(sessionId);
+        if (handler != null) {
+            handler.close();
+        }
         logger.info("WebSocket connection closed: {}", sessionId);
     }
 

@@ -6,6 +6,7 @@ import org.springframework.web.socket.config.annotation.WebSocketConfigurer;
 import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry;
 import com.quill.backend.websocket.TerminalWebSocketHandler;
 import org.springframework.context.annotation.Bean;
+import org.springframework.lang.NonNull;
 
 @Configuration
 @EnableWebSocket
@@ -17,7 +18,7 @@ public class WebSocketConfig implements WebSocketConfigurer {
     }
 
     @Override
-    public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
+    public void registerWebSocketHandlers(@NonNull WebSocketHandlerRegistry registry) {
         registry.addHandler(terminalWebSocketHandler(), "/ws/terminal")
                .setAllowedOrigins("*");  // Configure this appropriately in production
     }

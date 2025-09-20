@@ -1,4 +1,5 @@
 C:\code\quill\backend\src\main\java\com\quill\backend\config\WebConfig.java
+C:\code\quill\backend\src\main\java\com\quill\backend\config\WebSocketConfig.java
 C:\code\quill\backend\src\main\java\com\quill\backend\controller\ConnectionController.java
 C:\code\quill\backend\src\main\java\com\quill\backend\controller\DataController.java
 C:\code\quill\backend\src\main\java\com\quill\backend\controller\ReportController.java
@@ -30,3 +31,4 @@ C:\code\quill\backend\src\main\java\com\quill\backend\service\DataManagementServ
 C:\code\quill\backend\src\main\java\com\quill\backend\service\ReportService.java
 C:\code\quill\backend\src\main\java\com\quill\backend\service\StorageService.java
 C:\code\quill\backend\src\main\java\com\quill\backend\service\UserService.java
+C:\code\quill\backend\src\main\java\com\quill\backend\websocket\TerminalWebSocketHandler.java
