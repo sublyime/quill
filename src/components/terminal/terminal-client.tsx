@@ -16,12 +16,9 @@ export function Terminal({ connectionId, onData }: TerminalProps) {
   const xtermRef = useRef<XTerm | null>(null);
   const [isClient, setIsClient] = useState(false);
 
+  // Import xterm styles at the top level
   useEffect(() => {
     setIsClient(true);
-    // Load xterm styles
-    if (typeof window !== 'undefined') {
-      require('xterm/css/xterm.css');
-    }
   }, []);
 
   useEffect(() => {
