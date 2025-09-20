@@ -11,16 +11,17 @@ public class DataConnectionManager {
 
     private final ConcurrentHashMap<Long, Thread> activeConnections = new ConcurrentHashMap<>();
     private final ConnectionRepository connectionRepository;
+    private final ModbusHandler modbusHandler;
 
     @Autowired
-    public DataConnectionManager(ConnectionRepository connectionRepository) {
+    public DataConnectionManager(ConnectionRepository connectionRepository, ModbusHandler modbusHandler) {
         this.connectionRepository = connectionRepository;
+        this.modbusHandler = modbusHandler;
     }
 
-    public Connection startConnection(Long connectionId) {
-        final Connection connection = connectionRepository.findById(connectionId)
-            .orElseThrow(() -> new RuntimeException("Connection not found"));
-
+    public boolean startConnection(Connection connection) {
+        Long connectionId = connection.getId();
+        
         // Check if already running
         if (activeConnections.containsKey(connectionId)) {
             throw new IllegalStateException("Connection is already running");
@@ -42,7 +43,7 @@ public class DataConnectionManager {
         connectionThread.start();
 
         activeConnections.put(connectionId, connectionThread);
-        return connection;
+        return true;
     }
 
     public Connection stopConnection(Long connectionId) {
@@ -77,7 +78,9 @@ public class DataConnectionManager {
                     case "API":
                         handleApiConnection(connection);
                         break;
-                    // Add more connection types as needed
+                    case "MODBUS_TCP":
+                        modbusHandler.handleModbusConnection(connection);
+                        break;
                     default:
                         throw new UnsupportedOperationException("Unsupported connection type: " + connection.getSourceType());
                 }

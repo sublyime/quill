@@ -21,6 +21,30 @@ public class ConnectionController {
     @Autowired
     private DataConnectionManager dataConnectionManager;
 
+    @PostMapping("/{id}/start")
+    public ResponseEntity<?> startConnection(@PathVariable Long id) {
+        try {
+            System.out.println("=== POST /api/connections/" + id + "/start called ===");
+            Optional<Connection> connectionOpt = connectionRepository.findById(id);
+            if (connectionOpt.isEmpty()) {
+                return ResponseEntity.notFound().build();
+            }
+            
+            Connection connection = connectionOpt.get();
+            boolean started = dataConnectionManager.startConnection(connection);
+            if (started) {
+                return ResponseEntity.ok().build();
+            } else {
+                return ResponseEntity.internalServerError().body("Failed to start connection");
+            }
+        } catch (Exception e) {
+            System.err.println("=== ERROR in startConnection ===");
+            System.err.println("Error message: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.internalServerError().body("Internal server error: " + e.getMessage());
+        }
+    }
+
     @GetMapping
     public ResponseEntity<List<Connection>> getAllConnections() {
         try {
@@ -134,22 +158,6 @@ public class ConnectionController {
             }
         } catch (Exception e) {
             System.err.println("=== ERROR in deleteConnection ===");
-            System.err.println("Error message: " + e.getMessage());
-            e.printStackTrace();
-            return ResponseEntity.internalServerError().build();
-        }
-    }
-
-    @PostMapping("/{id}/start")
-    public ResponseEntity<?> startConnection(@PathVariable Long id) {
-        try {
-            System.out.println("=== POST /api/connections/" + id + "/start called ===");
-            Connection connection = dataConnectionManager.startConnection(id);
-            return ResponseEntity.ok(connection);
-        } catch (IllegalStateException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
-        } catch (Exception e) {
-            System.err.println("=== ERROR in startConnection ===");
             System.err.println("Error message: " + e.getMessage());
             e.printStackTrace();
             return ResponseEntity.internalServerError().build();

@@ -24,6 +24,21 @@ public class Connection {
     @Column(length = 2000)
     private String configuration;
     
+    @Transient
+    private com.fasterxml.jackson.databind.JsonNode configurationJson;
+    
+    public String getConfigurationValue(String key) {
+        try {
+            if (configurationJson == null && configuration != null) {
+                configurationJson = new com.fasterxml.jackson.databind.ObjectMapper().readTree(configuration);
+            }
+            return configurationJson != null && configurationJson.has(key) ? 
+                   configurationJson.get(key).asText() : null;
+        } catch (Exception e) {
+            throw new RuntimeException("Error parsing configuration: " + e.getMessage(), e);
+        }
+    }
+    
     @Enumerated(EnumType.STRING)
     private ConnectionStatus status = ConnectionStatus.INACTIVE;
     
