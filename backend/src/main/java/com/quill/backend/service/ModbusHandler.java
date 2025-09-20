@@ -1,7 +1,6 @@
 package com.quill.backend.service;
 
 import com.quill.backend.model.Connection;
-import net.wimpi.modbus.ModbusException;
 import net.wimpi.modbus.io.ModbusTCPTransaction;
 import net.wimpi.modbus.msg.*;
 import net.wimpi.modbus.net.TCPMasterConnection;
@@ -35,7 +34,6 @@ public class ModbusHandler {
 
             // Create the appropriate request based on register type
             ModbusRequest req;
-            int[] data;
             
             switch (registerType.toLowerCase()) {
                 case "holding":

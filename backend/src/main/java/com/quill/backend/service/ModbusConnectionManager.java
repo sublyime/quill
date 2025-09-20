@@ -15,7 +15,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.net.InetAddress;
-import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -87,6 +86,49 @@ public class ModbusConnectionManager {
         }
 
         logger.info("Stopped Modbus connection for connection {}", connectionId);
+    }
+
+    public void writeHoldingRegister(Connection connection, int register, int value) throws Exception {
+        Long connectionId = connection.getId();
+        TCPMasterConnection con = activeConnections.get(connectionId);
+        if (con == null || !con.isConnected()) {
+            throw new ModbusConnectionException(
+                connection.getConfigurationValue("ipAddress"),
+                Integer.parseInt(connection.getConfigurationValue("port")),
+                ModbusConnectionException.ErrorType.CONNECTION_FAILED,
+                "No active connection"
+            );
+        }
+
+        WriteMultipleRegistersRequest req = new WriteMultipleRegistersRequest(
+            register,
+            new net.wimpi.modbus.procimg.SimpleRegister[]{ new net.wimpi.modbus.procimg.SimpleRegister(value) }
+        );
+        req.setUnitID(Integer.parseInt(connection.getConfigurationValue("slaveId")));
+
+        ModbusTCPTransaction trans = new ModbusTCPTransaction(con);
+        trans.setRequest(req);
+        trans.execute();
+    }
+
+    public void writeCoil(Connection connection, int coilAddress, boolean value) throws Exception {
+        Long connectionId = connection.getId();
+        TCPMasterConnection con = activeConnections.get(connectionId);
+        if (con == null || !con.isConnected()) {
+            throw new ModbusConnectionException(
+                connection.getConfigurationValue("ipAddress"),
+                Integer.parseInt(connection.getConfigurationValue("port")),
+                ModbusConnectionException.ErrorType.CONNECTION_FAILED,
+                "No active connection"
+            );
+        }
+
+        WriteCoilRequest req = new WriteCoilRequest(coilAddress, value);
+        req.setUnitID(Integer.parseInt(connection.getConfigurationValue("slaveId")));
+
+        ModbusTCPTransaction trans = new ModbusTCPTransaction(con);
+        trans.setRequest(req);
+        trans.execute();
     }
 
     private TCPMasterConnection createConnection(Connection connection) {
@@ -227,9 +269,6 @@ public class ModbusConnectionManager {
     }
 
     private void handleError(Connection connection, Exception e) {
-        String ipAddress = connection.getConfigurationValue("ipAddress");
-        int port = Integer.parseInt(connection.getConfigurationValue("port"));
-
         ModbusConnectionException.ErrorType errorType;
         String message;
 

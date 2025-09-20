@@ -147,7 +147,7 @@ public class ConnectionController {
         try {
             System.out.println("=== DELETE /api/connections/" + id + " called ===");
             if (connectionRepository.existsById(id)) {
-                if (dataConnectionManager.isConnectionRunning(id)) {
+                if (dataConnectionManager.isRunning(id)) {
                     dataConnectionManager.stopConnection(id);
                 }
                 connectionRepository.deleteById(id);
@@ -186,7 +186,7 @@ public class ConnectionController {
             System.out.println("=== GET /api/connections/" + id + "/status called ===");
             Optional<Connection> connection = connectionRepository.findById(id);
             if (connection.isPresent()) {
-                boolean isRunning = dataConnectionManager.isConnectionRunning(id);
+                boolean isRunning = dataConnectionManager.isRunning(id);
                 return ResponseEntity.ok(Map.of(
                     "status", connection.get().getStatus(),
                     "isRunning", isRunning,

@@ -1,7 +1,6 @@
 package com.quill.backend.model;
 
 import jakarta.validation.constraints.*;
-import com.fasterxml.jackson.annotation.JsonProperty;
 
 public class ModbusConfig {
     @NotNull(message = "IP address is required")
