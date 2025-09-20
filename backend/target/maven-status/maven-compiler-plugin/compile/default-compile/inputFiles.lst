@@ -31,4 +31,10 @@ C:\code\quill\backend\src\main\java\com\quill\backend\service\DataManagementServ
 C:\code\quill\backend\src\main\java\com\quill\backend\service\ReportService.java
 C:\code\quill\backend\src\main\java\com\quill\backend\service\StorageService.java
 C:\code\quill\backend\src\main\java\com\quill\backend\service\UserService.java
+C:\code\quill\backend\src\main\java\com\quill\backend\stream\BaseStorageStreamHandler.java
+C:\code\quill\backend\src\main\java\com\quill\backend\stream\DatabaseStreamHandler.java
+C:\code\quill\backend\src\main\java\com\quill\backend\stream\FileSystemStreamHandler.java
+C:\code\quill\backend\src\main\java\com\quill\backend\stream\S3StreamHandler.java
+C:\code\quill\backend\src\main\java\com\quill\backend\stream\StorageStreamHandler.java
+C:\code\quill\backend\src\main\java\com\quill\backend\stream\StreamHandlerFactory.java
 C:\code\quill\backend\src\main\java\com\quill\backend\websocket\TerminalWebSocketHandler.java
