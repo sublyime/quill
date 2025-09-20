@@ -184,7 +184,8 @@ export default function UsersPage() {
         ) : (
           <DataTable 
             columns={createColumns({
-              onDelete: handleDeleteUser
+              onDelete: handleDeleteUser,
+              onEdit: handleEdit
             })}
             data={users}
           />

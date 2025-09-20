@@ -122,7 +122,7 @@ export default function StoragePage() {
     }
   };
 
-  const setAsDefault = async (id: number, name: string) => {
+  const handleSetDefault = async (id: number, name: string) => {
     try {
       await apiSetAsDefault(id);
       setStorageConfigs(prev => prev.map(config => ({ ...config, isDefault: config.id === id })));
@@ -224,9 +224,9 @@ export default function StoragePage() {
                     </div>
                     <div className="flex items-center space-x-2">
                       {config.isDefault && (
-                        <Badge key="default" variant="default" className="text-xs">Default</Badge>
+                        <Badge variant="default" className="text-xs">Default</Badge>
                       )}
-                      <Badge key="status" className={`text-xs ${getStatusColor(config.status || 'CONFIGURED')}`}>
+                      <Badge className={`text-xs ${getStatusColor(config.status || 'CONFIGURED')}`}>
                         <div className="flex items-center space-x-1">
                           {getStatusIcon(config.status || 'CONFIGURED')}
                           <span>{config.status || 'CONFIGURED'}</span>
@@ -242,7 +242,7 @@ export default function StoragePage() {
                       {new Date(config.createdAt).toLocaleDateString()}
                     </div>
                     {config.lastTestedAt && (
-                      <div key="last-tested" className="text-sm">
+                      <div className="text-sm">
                         <span className="font-medium">Last Tested:</span>{' '}
                         {new Date(config.lastTestedAt).toLocaleDateString()}
                       </div>
@@ -258,9 +258,9 @@ export default function StoragePage() {
                         disabled={isTestingThis}
                       >
                         {isTestingThis ? (
-                          <Clock key="testing-icon" className="h-3 w-3 mr-1 animate-spin" />
+                          <Clock className="h-3 w-3 mr-1 animate-spin" />
                         ) : (
-                          <TestTube key="test-icon" className="h-3 w-3 mr-1" />
+                          <TestTube className="h-3 w-3 mr-1" />
                         )}
                         Test
                       </Button>
@@ -269,7 +269,7 @@ export default function StoragePage() {
                           key="set-default-button"
                           variant="outline"
                           size="sm"
-                          onClick={() => config.id && setAsDefault(config.id, config.name)}
+                          onClick={() => config.id && handleSetDefault(config.id, config.name)}
                         >
                           Set Default
                         </Button>

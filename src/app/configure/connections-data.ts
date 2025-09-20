@@ -1,12 +1,13 @@
 export interface Connection {
-  id: number; // Changed from string to number to match backend Long
+  id: number;
   name: string;
   sourceType: string;
   config: string; // JSON string
-  status: 'ONLINE' | 'OFFLINE' | 'ERROR' | 'CONNECTING';
+  status: 'ONLINE' | 'OFFLINE' | 'ERROR' | 'TESTING' | 'ACTIVE' | 'INACTIVE';
   createdAt: string;
   lastConnected?: string;
   lastError?: string;
+  configuration?: string;
 }
 
 export interface ParsedConnectionConfig {

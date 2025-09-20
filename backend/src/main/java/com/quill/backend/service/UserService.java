@@ -213,6 +213,29 @@ public class UserService {
         user.setUpdatedAt(LocalDateTime.now());
         return userRepository.save(user);
     }
+
+    // Reset password
+    public User resetPassword(Long id, String currentPassword, String newPassword) {
+        User user = findById(id).orElseThrow(() -> new RuntimeException("User not found"));
+        
+        // In production, you would use a proper password hashing mechanism
+        // and compare the hashed passwords
+        if (!user.getPassword().equals(currentPassword)) {
+            throw new IllegalArgumentException("Current password is incorrect");
+        }
+        
+        user.setPassword(newPassword); // In production, hash this password
+        user.setUpdatedAt(LocalDateTime.now());
+        return userRepository.save(user);
+    }
+
+    // Force reset password (admin only)
+    public User forceResetPassword(Long id, String newPassword) {
+        User user = findById(id).orElseThrow(() -> new RuntimeException("User not found"));
+        user.setPassword(newPassword); // In production, hash this password
+        user.setUpdatedAt(LocalDateTime.now());
+        return userRepository.save(user);
+    }
     
     // Add role to user
     public User addRole(Long id, User.UserRole role) {

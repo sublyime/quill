@@ -1,6 +1,7 @@
 'use client';
 
 import { User } from '@/app/users/columns';
+import { UserProfile } from './user-types';
 
 const API_BASE_URL = 'http://localhost:8080/api';
 
@@ -10,15 +11,7 @@ export const getUsers = async (): Promise<User[]> => {
   if (!response.ok) {
     throw new Error('Failed to fetch users');
   }
-  const data = await response.json();
-  // Transform backend data to frontend format
-  return data.map((user: any) => ({
-    id: user.id.toString(),
-    name: user.firstName || user.username,
-    email: user.email,
-    role: user.roles?.[0] || 'Viewer',
-    status: user.status === 'ACTIVE' ? 'active' : 'inactive',
-  }));
+  return response.json();
 };
 
 // Create a new user
@@ -27,12 +20,14 @@ export const createUser = async (userData: Omit<User, 'id' | 'status'>): Promise
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      username: userData.name,
+      username: userData.username,
       email: userData.email,
-      firstName: userData.name,
-      roles: [userData.role.toUpperCase()],
+      firstName: userData.firstName,
+      lastName: userData.lastName,
+      roles: userData.roles,
       status: 'ACTIVE',
-      password: 'tempPassword123', // This should be handled securely
+      password: 'tempPassword123', // This should be handled securely in production
+      phone: userData.phone
     }),
   });
 
@@ -40,14 +35,7 @@ export const createUser = async (userData: Omit<User, 'id' | 'status'>): Promise
     throw new Error('Failed to create user');
   }
 
-  const newUser = await response.json();
-  return {
-    id: newUser.id.toString(),
-    name: newUser.firstName || newUser.username,
-    email: newUser.email,
-    role: userData.role,
-    status: 'active',
-  };
+  return response.json();
 };
 
 // Update an existing user
@@ -56,11 +44,13 @@ export const updateUser = async (user: User): Promise<User> => {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-        username: user.name,
+        username: user.username,
         email: user.email,
-        firstName: user.name,
-        roles: [user.role.toUpperCase()],
-        status: user.status.toUpperCase(),
+        firstName: user.firstName,
+        lastName: user.lastName,
+        roles: user.roles,
+        status: user.status,
+        phone: user.phone
     }),
   });
 
@@ -68,14 +58,7 @@ export const updateUser = async (user: User): Promise<User> => {
     throw new Error('Failed to update user');
   }
 
-  const updatedUser = await response.json();
-  return {
-    id: updatedUser.id.toString(),
-    name: updatedUser.firstName || updatedUser.username,
-    email: updatedUser.email,
-    role: user.role, // Assuming the role doesn't change on update in this response
-    status: updatedUser.status === 'ACTIVE' ? 'active' : 'inactive',
-  };
+  return response.json();
 };
 
 // Delete a user
@@ -87,4 +70,41 @@ export const deleteUser = async (userId: string): Promise<void> => {
   if (!response.ok) {
     throw new Error('Failed to delete user');
   }
+};
+
+// Reset user's password (requires current password)
+export const resetPassword = async (userId: string, currentPassword: string, newPassword: string): Promise<void> => {
+  const response = await fetch(`${API_BASE_URL}/users/${userId}/reset-password`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ currentPassword, newPassword }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Failed to reset password');
+  }
+};
+
+// Force reset user's password (admin only)
+export const forceResetPassword = async (userId: string, newPassword: string): Promise<void> => {
+  const response = await fetch(`${API_BASE_URL}/users/${userId}/force-reset-password`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ newPassword }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Failed to reset password');
+  }
+};
+
+// Get user's full profile including roles and permissions
+export const getUserProfile = async (userId: string): Promise<UserProfile> => {
+  const response = await fetch(`${API_BASE_URL}/users/${userId}`);
+  if (!response.ok) {
+    throw new Error('Failed to fetch user profile');
+  }
+  return response.json();
 };

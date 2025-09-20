@@ -29,13 +29,13 @@ export type User = {
   id: number;
   username: string;
   email: string;
-  firstName?: string;
-  lastName?: string;
+  firstName: string;
+  lastName: string;
   phone?: string;
-  roles?: string[];
-  status?: string;
-  createdAt?: string;
-  updatedAt?: string;
+  roles: string[];
+  status: string;
+  createdAt: string;
+  updatedAt: string;
 };
 
 // Define base columns without actions
@@ -149,6 +149,7 @@ const baseColumns: ColumnDef<User>[] = [
 // Export function to create columns with delete action
 export const createColumns = (handlers: {
   onDelete: (user: User) => void;
+  onEdit: (user: User) => void;
 }): ColumnDef<User>[] => [
   ...baseColumns,
   {
@@ -167,6 +168,9 @@ export const createColumns = (handlers: {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuLabel>Actions</DropdownMenuLabel>
+              <DropdownMenuItem onClick={() => handlers.onEdit(user)}>
+                Edit User
+              </DropdownMenuItem>
               <AlertDialogTrigger asChild>
                 <DropdownMenuItem className="text-red-600">
                   Delete User

@@ -2,6 +2,24 @@
 
 import { useState } from 'react';
 import { Connection } from './connections-data';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Play, Square, TestTube, Trash } from 'lucide-react';
+import { Spinner } from '@/components/ui/spinner';
+
+const getStatusVariant = (status: string): "default" | "secondary" | "destructive" | "outline" => {
+  switch (status) {
+    case 'ONLINE':
+    case 'ACTIVE':
+      return 'secondary';
+    case 'ERROR':
+      return 'destructive';
+    case 'INACTIVE':
+      return 'outline';
+    default:
+      return 'default';
+  }
+};
 
 interface ConnectionsListProps {
   connections: Connection[];
@@ -11,6 +29,8 @@ interface ConnectionsListProps {
 export function ConnectionsList({ connections, onConnectionsChange }: ConnectionsListProps) {
   const [testingIds, setTestingIds] = useState<Set<number>>(new Set());
   const [deletingIds, setDeletingIds] = useState<Set<number>>(new Set());
+  const [startingIds, setStartingIds] = useState<Set<number>>(new Set());
+  const [stoppingIds, setStoppingIds] = useState<Set<number>>(new Set());
 
   const testConnection = async (id: number) => {
     setTestingIds(prev => new Set([...prev, id]));
@@ -89,6 +109,64 @@ export function ConnectionsList({ connections, onConnectionsChange }: Connection
     );
   }
 
+  const startConnection = async (id: number) => {
+    setStartingIds(prev => new Set([...prev, id]));
+    
+    try {
+      const response = await fetch(`http://localhost:8080/api/connections/${id}/start`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      console.log('Connection started successfully');
+      onConnectionsChange();
+    } catch (error) {
+      console.error('Error starting connection:', error);
+      alert('Failed to start connection');
+    } finally {
+      setStartingIds(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(id);
+        return newSet;
+      });
+    }
+  };
+
+  const stopConnection = async (id: number) => {
+    setStoppingIds(prev => new Set([...prev, id]));
+    
+    try {
+      const response = await fetch(`http://localhost:8080/api/connections/${id}/stop`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      console.log('Connection stopped successfully');
+      onConnectionsChange();
+    } catch (error) {
+      console.error('Error stopping connection:', error);
+      alert('Failed to stop connection');
+    } finally {
+      setStoppingIds(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(id);
+        return newSet;
+      });
+    }
+  };
+
   return (
     <div className="space-y-4">
       {connections.map((connection) => (
@@ -96,37 +174,69 @@ export function ConnectionsList({ connections, onConnectionsChange }: Connection
           <div className="flex items-start justify-between">
             <div className="flex-1">
               <h3 className="font-semibold text-lg">{connection.name}</h3>
-              <p className="text-sm text-muted-foreground capitalize">
-                {connection.sourceType} • {connection.status}
-              </p>
-              {connection.config && (
-                <p className="text-xs text-muted-foreground mt-1">
-                  {connection.config.length > 100 
-                    ? `${connection.config.substring(0, 100)}...` 
-                    : connection.config}
-                </p>
+              <p className="text-muted-foreground text-sm mb-2">Type: {connection.sourceType}</p>
+              <div className="flex items-center gap-2">
+                <Badge variant={getStatusVariant(connection.status)}>{connection.status}</Badge>
+                {connection.lastError && (
+                  <Badge variant="destructive">Error: {connection.lastError}</Badge>
+                )}
+              </div>
+              {connection.configuration && (
+                <div className="mt-2">
+                  <p className="text-sm text-muted-foreground">
+                    Configuration: {JSON.stringify(JSON.parse(connection.configuration), null, 2)}
+                  </p>
+                </div>
               )}
-              <p className="text-xs text-muted-foreground">
-                Created: {new Date(connection.createdAt).toLocaleString()}
-              </p>
             </div>
-            
-            <div className="flex gap-2 ml-4">
-              <button
+            <div className="flex items-center gap-2">
+              {connection.status !== 'ACTIVE' ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => startConnection(connection.id)}
+                  disabled={startingIds.has(connection.id)}
+                >
+                  {startingIds.has(connection.id) ? <Spinner /> : <Play className="h-4 w-4" />}
+                  <span className="ml-2">Start</span>
+                </Button>
+              ) : (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => stopConnection(connection.id)}
+                  disabled={stoppingIds.has(connection.id)}
+                >
+                  {stoppingIds.has(connection.id) ? <Spinner /> : <Square className="h-4 w-4" />}
+                  <span className="ml-2">Stop</span>
+                </Button>
+              )}
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={() => testConnection(connection.id)}
                 disabled={testingIds.has(connection.id)}
-                className="px-3 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50"
               >
-                {testingIds.has(connection.id) ? 'Testing...' : 'Test'}
-              </button>
-              
-              <button
+                {testingIds.has(connection.id) ? (
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                ) : (
+                  <TestTube className="h-4 w-4" />
+                )}
+                <span className="ml-2">Test</span>
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={() => deleteConnection(connection.id)}
                 disabled={deletingIds.has(connection.id)}
-                className="px-3 py-1 text-sm bg-red-500 text-white rounded hover:bg-red-600 disabled:opacity-50"
               >
-                {deletingIds.has(connection.id) ? 'Deleting...' : 'Delete'}
-              </button>
+                {deletingIds.has(connection.id) ? (
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                ) : (
+                  <Trash className="h-4 w-4" />
+                )}
+                <span className="ml-2">Delete</span>
+              </Button>
             </div>
           </div>
         </div>

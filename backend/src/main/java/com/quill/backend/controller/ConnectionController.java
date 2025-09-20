@@ -2,10 +2,12 @@ package com.quill.backend.controller;
 
 import com.quill.backend.model.Connection;
 import com.quill.backend.repository.ConnectionRepository;
+import com.quill.backend.service.DataConnectionManager;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @RestController
@@ -15,6 +17,9 @@ public class ConnectionController {
 
     @Autowired
     private ConnectionRepository connectionRepository;
+
+    @Autowired
+    private DataConnectionManager dataConnectionManager;
 
     @GetMapping
     public ResponseEntity<List<Connection>> getAllConnections() {
@@ -118,6 +123,9 @@ public class ConnectionController {
         try {
             System.out.println("=== DELETE /api/connections/" + id + " called ===");
             if (connectionRepository.existsById(id)) {
+                if (dataConnectionManager.isConnectionRunning(id)) {
+                    dataConnectionManager.stopConnection(id);
+                }
                 connectionRepository.deleteById(id);
                 System.out.println("Successfully deleted connection with ID: " + id);
                 return ResponseEntity.ok().build();
@@ -126,6 +134,61 @@ public class ConnectionController {
             }
         } catch (Exception e) {
             System.err.println("=== ERROR in deleteConnection ===");
+            System.err.println("Error message: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    @PostMapping("/{id}/start")
+    public ResponseEntity<?> startConnection(@PathVariable Long id) {
+        try {
+            System.out.println("=== POST /api/connections/" + id + "/start called ===");
+            Connection connection = dataConnectionManager.startConnection(id);
+            return ResponseEntity.ok(connection);
+        } catch (IllegalStateException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        } catch (Exception e) {
+            System.err.println("=== ERROR in startConnection ===");
+            System.err.println("Error message: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    @PostMapping("/{id}/stop")
+    public ResponseEntity<?> stopConnection(@PathVariable Long id) {
+        try {
+            System.out.println("=== POST /api/connections/" + id + "/stop called ===");
+            Connection connection = dataConnectionManager.stopConnection(id);
+            return ResponseEntity.ok(connection);
+        } catch (IllegalStateException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        } catch (Exception e) {
+            System.err.println("=== ERROR in stopConnection ===");
+            System.err.println("Error message: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    @GetMapping("/{id}/status")
+    public ResponseEntity<?> getConnectionStatus(@PathVariable Long id) {
+        try {
+            System.out.println("=== GET /api/connections/" + id + "/status called ===");
+            Optional<Connection> connection = connectionRepository.findById(id);
+            if (connection.isPresent()) {
+                boolean isRunning = dataConnectionManager.isConnectionRunning(id);
+                return ResponseEntity.ok(Map.of(
+                    "status", connection.get().getStatus(),
+                    "isRunning", isRunning,
+                    "lastError", connection.get().getLastError()
+                ));
+            } else {
+                return ResponseEntity.notFound().build();
+            }
+        } catch (Exception e) {
+            System.err.println("=== ERROR in getConnectionStatus ===");
             System.err.println("Error message: " + e.getMessage());
             e.printStackTrace();
             return ResponseEntity.internalServerError().build();

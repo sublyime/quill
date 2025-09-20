@@ -5,6 +5,7 @@ C:\code\quill\backend\src\main\java\com\quill\backend\controller\ReportControlle
 C:\code\quill\backend\src\main\java\com\quill\backend\controller\StorageController.java
 C:\code\quill\backend\src\main\java\com\quill\backend\controller\UserController.java
 C:\code\quill\backend\src\main\java\com\quill\backend\dto\CreateUserRequest.java
+C:\code\quill\backend\src\main\java\com\quill\backend\dto\PasswordResetRequest.java
 C:\code\quill\backend\src\main\java\com\quill\backend\dto\StorageCreateRequest.java
 C:\code\quill\backend\src\main\java\com\quill\backend\exception\GlobalExceptionHandler.java
 C:\code\quill\backend\src\main\java\com\quill\backend\exception\StorageException.java
@@ -24,6 +25,7 @@ C:\code\quill\backend\src\main\java\com\quill\backend\repository\StorageConfigRe
 C:\code\quill\backend\src\main\java\com\quill\backend\repository\StorageRepository.java
 C:\code\quill\backend\src\main\java\com\quill\backend\repository\UserRepository.java
 C:\code\quill\backend\src\main\java\com\quill\backend\service\ConnectionService.java
+C:\code\quill\backend\src\main\java\com\quill\backend\service\DataConnectionManager.java
 C:\code\quill\backend\src\main\java\com\quill\backend\service\DataManagementService.java
 C:\code\quill\backend\src\main\java\com\quill\backend\service\ReportService.java
 C:\code\quill\backend\src\main\java\com\quill\backend\service\StorageService.java

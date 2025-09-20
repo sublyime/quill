@@ -3,6 +3,7 @@ package com.quill.backend.controller;
 import com.quill.backend.model.User;
 import com.quill.backend.service.UserService;
 import com.quill.backend.dto.CreateUserRequest;
+import com.quill.backend.dto.PasswordResetRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -132,5 +133,37 @@ public class UserController {
             "activeUsers", userService.getActiveUsers()
         );
         return ResponseEntity.ok(stats);
+    }
+
+    // Reset password endpoint
+    @PostMapping("/{id}/reset-password")
+    public ResponseEntity<?> resetPassword(@PathVariable Long id, @RequestBody PasswordResetRequest request) {
+        try {
+            userService.resetPassword(id, request.getCurrentPassword(), request.getNewPassword());
+            return ResponseEntity.ok(Map.of("message", "Password reset successfully"));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(Map.of("error", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of("error", "An error occurred while resetting password"));
+        }
+    }
+
+    // Force reset password (admin only)
+    @PostMapping("/{id}/force-reset-password")
+    public ResponseEntity<?> forceResetPassword(@PathVariable Long id, @RequestBody Map<String, String> request) {
+        try {
+            String newPassword = request.get("newPassword");
+            if (newPassword == null || newPassword.trim().isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of("error", "New password is required"));
+            }
+
+            userService.forceResetPassword(id, newPassword);
+            return ResponseEntity.ok(Map.of("message", "Password reset successfully"));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of("error", "An error occurred while resetting password"));
+        }
     }
 }

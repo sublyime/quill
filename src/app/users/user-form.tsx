@@ -17,19 +17,31 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { toast } from '@/hooks/use-toast';
 import { User } from './columns';
 import { useState, useEffect } from 'react';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { resetPassword, forceResetPassword } from '@/lib/user-api';
 
 // Fixed schema to match backend expectations
+const passwordResetSchema = z.object({
+  currentPassword: z.string().min(1, 'Current password is required'),
+  newPassword: z.string().min(6, 'New password must be at least 6 characters'),
+  confirmPassword: z.string().min(1, 'Please confirm your password'),
+}).refine((data) => data.newPassword === data.confirmPassword, {
+  message: "Passwords don't match",
+  path: ["confirmPassword"],
+});
+
 const formSchema = z.object({
   username: z.string().min(3, 'Username must be at least 3 characters.'),
   email: z.string().email('Please enter a valid email address.'),
-  password: z.string().min(6, 'Password must be at least 6 characters.'),
+  password: z.string().min(6, 'Password must be at least 6 characters.').optional(),
   firstName: z.string().min(1, 'First name is required.'),
   lastName: z.string().min(1, 'Last name is required.'),
   phone: z.string().optional(),
-  role: z.enum(['ADMIN', 'EDITOR', 'VIEWER', 'MANAGER', 'ANALYST']).default('VIEWER'),
+  roles: z.array(z.enum(['ADMIN', 'EDITOR', 'VIEWER', 'MANAGER', 'ANALYST'])).default(['VIEWER']),
 });
 
 type UserFormValues = z.infer<typeof formSchema>;
+type PasswordResetValues = z.infer<typeof passwordResetSchema>;
 
 interface UserFormProps {
   onSubmit: (user: User) => void;
@@ -44,7 +56,7 @@ async function createUser(userData: UserFormValues): Promise<User> {
   // Transform the data to match backend expectations
   const requestData = {
     ...userData,
-    role: userData.role, // Send the role as a single value
+    roles: userData.roles,
     status: 'ACTIVE',
   };
   
@@ -87,6 +99,7 @@ async function updateUser(userData: Partial<User>): Promise<User> {
 
 export function UserForm({ onSubmit, onCancel, currentUser }: UserFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showPasswordReset, setShowPasswordReset] = useState(false);
   const isEditMode = !!currentUser;
 
   const form = useForm<UserFormValues>({
@@ -98,7 +111,7 @@ export function UserForm({ onSubmit, onCancel, currentUser }: UserFormProps) {
       firstName: '',
       lastName: '',
       phone: '',
-      role: 'VIEWER',
+      roles: ['VIEWER'],
     },
   });
 
@@ -111,6 +124,7 @@ export function UserForm({ onSubmit, onCancel, currentUser }: UserFormProps) {
         firstName: currentUser.firstName || '',
         lastName: currentUser.lastName || '',
         phone: currentUser.phone || '',
+        roles: [(currentUser.roles?.[0] || 'VIEWER') as "ADMIN" | "EDITOR" | "VIEWER" | "MANAGER" | "ANALYST"],
       });
     }
   }, [isEditMode, currentUser, form]);
@@ -251,28 +265,100 @@ export function UserForm({ onSubmit, onCancel, currentUser }: UserFormProps) {
 
         <FormField
           control={form.control}
-          name="role"
+          name="roles"
           render={({ field }) => (
             <FormItem>
               <FormLabel>Role</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
-                <FormControl>
+              <FormControl>
+                <Select 
+                  onValueChange={(value) => field.onChange([value])} 
+                  value={Array.isArray(field.value) ? field.value[0] : undefined}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Select a role" />
                   </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  <SelectItem value="VIEWER">Viewer</SelectItem>
-                  <SelectItem value="EDITOR">Editor</SelectItem>
-                  <SelectItem value="ANALYST">Analyst</SelectItem>
-                  <SelectItem value="MANAGER">Manager</SelectItem>
-                  <SelectItem value="ADMIN">Admin</SelectItem>
-                </SelectContent>
-              </Select>
+                  <SelectContent>
+                    <SelectItem value="VIEWER">Viewer</SelectItem>
+                    <SelectItem value="EDITOR">Editor</SelectItem>
+                    <SelectItem value="ANALYST">Analyst</SelectItem>
+                    <SelectItem value="MANAGER">Manager</SelectItem>
+                    <SelectItem value="ADMIN">Admin</SelectItem>
+                  </SelectContent>
+                </Select>
+              </FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
+
+        {isEditMode && (
+          <div className="space-y-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setShowPasswordReset(true)}
+            >
+              Reset Password
+            </Button>
+          </div>
+        )}
+        
+        <AlertDialog open={showPasswordReset} onOpenChange={setShowPasswordReset}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Reset Password</AlertDialogTitle>
+              <AlertDialogDescription>
+                Please enter the new password for this user.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(async (data) => {
+                if (currentUser) {
+                  try {
+                    await forceResetPassword(currentUser.id.toString(), data.password || '');
+                    setShowPasswordReset(false);
+                    toast({
+                      title: 'Success',
+                      description: 'Password has been reset successfully.',
+                    });
+                  } catch (error) {
+                    toast({
+                      title: 'Error',
+                      description: 'Failed to reset password.',
+                      variant: 'destructive',
+                    });
+                  }
+                }
+              })} className="space-y-4 py-4">
+                <FormField
+                  control={form.control}
+                  name="password"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>New Password</FormLabel>
+                      <FormControl>
+                        <Input type="password" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </form>
+            </Form>
+
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={form.handleSubmit(async (data) => {
+                if (currentUser && data.password) {
+                  await forceResetPassword(currentUser.id.toString(), data.password);
+                }
+              })}>
+                Reset Password
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
 
         <div className="flex gap-2">
           <Button type="submit" disabled={isSubmitting}>
